@@ -1,0 +1,13 @@
+/*
+!.gitignore
+!my-tft-app.php
+
+!vite-project/
+vite-project/*
+
+!vite-project/src/
+vite-project/src/*
+
+!vite-project/src/main.tsx
+!vite-project/src/App.tsx
+!vite-project/src/features/
