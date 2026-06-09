@@ -14,7 +14,7 @@ export const findBestCombinationBeam = (
   selectedChampions: Champion[],
   traits: Trait[],
   targetDepth: number,
-  beamWidth: number = 10,
+  beamWidth: number = 28,
   returnCount: number = 5
 ): Result[] => {
   const { champMap, traitMap } = createTraitContext(fixedChampions, selectedChampions, traits);

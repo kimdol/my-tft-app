@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import Header from './components/Header';
-import SearchBar from './components/SearchBar';
-import SelectedList from './components/SelectedList';
-import ChampionGrid from './components/ChampionGrid';
+import { useState } from "react";
+import Header from "./components/Header";
+import SearchBar from "./components/SearchBar";
+import SelectedList from "./components/SelectedList";
+import ChampionGrid from "./components/ChampionGrid";
+import CostToggleBar from './components/CostToggleBar';
 
 import type { SelectorMode } from "../../store/useSelectorModeStore";
 
@@ -11,7 +12,7 @@ interface Props {
 }
 
 export default function ChampionSelector({ mode }: Props) {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
 
   return (
     <div className="min-h-screen bg-[#050505] text-white p-4 md:p-8">
@@ -21,7 +22,10 @@ export default function ChampionSelector({ mode }: Props) {
 
         <SelectedList mode={mode} />
 
-        <SearchBar query={query} setQuery={setQuery} mode={mode} />
+        <div className="space-y-3">
+          <SearchBar query={query} setQuery={setQuery} mode={mode} />
+          <CostToggleBar mode={mode} />
+        </div>
 
         <ChampionGrid query={query} mode={mode} />
 

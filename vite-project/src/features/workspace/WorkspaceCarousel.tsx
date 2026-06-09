@@ -18,7 +18,14 @@ const WorkspaceCarousel = forwardRef<HTMLDivElement, WorkspaceCarouselProps>(
           scrollbar-none
           w-full gap-0
           items-start
+          isolate
+          transform-gpu
         "
+
+        style={{ 
+          backfaceVisibility: "hidden", 
+          WebkitOverflowScrolling: "touch" 
+        }}
       >
         {children}
       </div>

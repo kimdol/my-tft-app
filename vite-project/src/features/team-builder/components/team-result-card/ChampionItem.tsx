@@ -1,21 +1,36 @@
 import Text from "../../../ui/Text";
+import type { Cost } from "../../../selector/champion-selector/types"; 
+import { COST_THEMES } from "../../constants"; 
 
-export default function ChampionItem({ name }: any) {
+interface Props {
+  name: string;
+  cost: Cost;
+}
+
+export default function ChampionItem({ name, cost }: Props) {
+  const theme = COST_THEMES[cost] || COST_THEMES[1];
+
   return (
     <div
-      className="
+      className={`
         relative aspect-square w-full
         rounded-lg
-        bg-white/5 border border-white/5
-        flex items-center justify-center p-1
-        transition-all duration-150
-        hover:scale-105 hover:bg-white/10 hover:border-purple-500/50
+        border
+        flex flex-col items-center justify-center 
+        p-2.5 gap-y-1
+        transition-all duration-200
+        hover:scale-[1.03]
         overflow-hidden
-      "
+        ${theme}
+      `}
     >
-      <Text variant="label">{name}</Text>
-
-      <div className="absolute inset-0 bg-purple-500/0 hover:bg-purple-500/10 transition-colors" />
+      <Text variant="label" className="text-center break-keep leading-tight drop-shadow-md z-10">
+        {name}
+      </Text>
+      
+      <Text variant="caption" className="text-[10px] opacity-70 mt-0.5 z-10">
+        {cost}G
+      </Text>
     </div>
   );
 }

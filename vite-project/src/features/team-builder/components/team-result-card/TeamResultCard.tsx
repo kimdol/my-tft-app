@@ -13,13 +13,12 @@ import { useSelectorModeStore } from "../../../store/useSelectorModeStore";
 
 interface Props {
   selectedTraits: Map<string, number>;
-  result: any; 
+  result: any;
 }
 
 export default function TeamResultCard({ result, selectedTraits }: Props) {
   const { champions, traits, selectTeam } = useTFTBuilderStore();
   const { setMode } = useSelectorModeStore();
-
 
   const champMap = new Map(champions.map((c) => [c.id, c]));
   const traitMap = new Map(traits.map((t) => [t.name, t]));
@@ -39,33 +38,47 @@ export default function TeamResultCard({ result, selectedTraits }: Props) {
       return tier >= 0 ? { name, count, trait, tier } : null;
     })
     .filter(Boolean)
-    .sort((a: any, b: any) =>{
+    .sort((a: any, b: any) => {
       if (b.count !== a.count) return b.count - a.count;
       return b.tier - a.tier;
     });
 
+  const sortedChampions = result.node
+    .toArray()
+    .map((id: string) => champMap.get(id))
+    .filter(Boolean)
+    .sort((a: any, b: any) => a.cost - b.cost);
+
   const handleApplyTeam = () => {
     const ids = result.node.toArray();
     selectTeam(ids);
-    
+
     setMode("candidate");
   };
 
   return (
-    <Card>
-      <TeamResultHeader score={result.score} onApply={handleApplyTeam} />
+    <div
+      className="w-full transform-gpu"
+      style={{
+        contentVisibility: "auto",
+        containIntrinsicSize: "0 500px",
+      }}
+    >
+      <Card>
+        <TeamResultHeader score={result.score} onApply={handleApplyTeam} />
 
-      <div className={layout.championGrid}>
-        {result.node.toArray().map((id: string) => (
-          <ChampionItem key={id} name={champMap.get(id)?.name ?? id} />
-        ))}
-      </div>
+        <div className={layout.championGrid}>
+          {sortedChampions.map((champ: any) => (
+            <ChampionItem key={champ.id} name={champ.name} cost={champ.cost} />
+          ))}
+        </div>
 
-      <div className="flex flex-wrap gap-1.5 mt-3">
-        {activeTraits.map((t: any) => (
-          <TraitChip key={t.name} trait={t} />
-        ))}
-      </div>
-    </Card>
+        <div className="flex flex-wrap gap-1.5 mt-3">
+          {activeTraits.map((t: any) => (
+            <TraitChip key={t.name} trait={t} />
+          ))}
+        </div>
+      </Card>
+    </div>
   );
 }

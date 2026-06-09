@@ -20,6 +20,48 @@ export const useWorkspaceCarousel = (tabs: TabItem[]) => {
     const container = containerRef.current;
     if (!container) return;
 
+    let startX = 0;
+    let startY = 0;
+    let isDirectionDetermined = false;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (isClickingRef.current) {
+        isClickingRef.current = false;
+        if (timerRef.current) clearTimeout(timerRef.current);
+      }
+
+      if (e.touches.length > 0) {
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        isDirectionDetermined = false;
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (isDirectionDetermined || e.touches.length === 0) return;
+
+      const currentX = e.touches[0].clientX;
+      const currentY = e.touches[0].clientY;
+
+      const dx = Math.abs(currentX - startX);
+      const dy = Math.abs(currentY - startY);
+
+      if (dx > 6 || dy > 6) {
+        isDirectionDetermined = true;
+
+        if (dy > dx * 1.3) {
+          container.style.overflowX = "hidden";
+          container.style.scrollSnapType = "none";
+        }
+      }
+    };
+
+    const handleTouchEnd = () => {
+      container.style.overflowX = "auto";
+      container.style.scrollSnapType = "x mandatory";
+      isDirectionDetermined = false;
+    };
+
     const cancelClickLock = () => {
       if (isClickingRef.current) {
         isClickingRef.current = false;
@@ -27,13 +69,17 @@ export const useWorkspaceCarousel = (tabs: TabItem[]) => {
       }
     };
 
-    container.addEventListener("touchstart", cancelClickLock, {
-      passive: true,
-    });
+    container.addEventListener("touchstart", handleTouchStart, { passive: true });
+    container.addEventListener("touchmove", handleTouchMove, { passive: true });
+    container.addEventListener("touchend", handleTouchEnd, { passive: true });
+    container.addEventListener("touchcancel", handleTouchEnd, { passive: true });
     container.addEventListener("wheel", cancelClickLock, { passive: true });
 
     return () => {
-      container.removeEventListener("touchstart", cancelClickLock);
+      container.removeEventListener("touchstart", handleTouchStart);
+      container.removeEventListener("touchmove", handleTouchMove);
+      container.removeEventListener("touchend", handleTouchEnd);
+      container.removeEventListener("touchcancel", handleTouchEnd);
       container.removeEventListener("wheel", cancelClickLock);
     };
   }, []);

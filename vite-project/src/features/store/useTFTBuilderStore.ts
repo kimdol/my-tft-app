@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import type { Champion } from '../selector/champion-selector/types';
-import { fetchTFTData, type Trait } from '../api/tftApi';
+import { create } from "zustand";
+import type { Champion, Cost } from "../selector/champion-selector/types";
+import { fetchTFTData, type Trait } from "../api/tftApi";
 
 interface State {
   champions: Champion[];
@@ -12,13 +12,18 @@ interface State {
   error: string | null;
 
   fetchAll: () => Promise<void>;
+
   toggle: (id: string) => void;
   toggleFixed: (id: string) => void;
+  toggleByCost: (cost: Cost) => void;
+
   updateTraitCount: (name: string, count: number) => void;
+
   clear: () => void;
   clearSelected: () => void;
   clearFixed: () => void;
   clearTraits: () => void;
+
   selectTeam: (ids: string[]) => void;
 }
 
@@ -38,23 +43,27 @@ export const useTFTBuilderStore = create<State>((set, get) => ({
 
     try {
       const { champions, traits } = await fetchTFTData();
-      const validTraits = traits.filter((t) => t.name !== '특성 선택');
+      const validTraits = traits.filter((t) => t.name !== "특성 선택");
 
       if (import.meta.env.DEV) {
-        console.group('📊 [TFT DATA FETCH SUCCESS]');
-        console.log(`🦸‍♂️ Champions Loaded: %c${champions.length}개`, 'color: #3b82f6; font-weight: bold');
-        console.log(`🧬 Total Traits Fetched: ${traits.length}개`);
-        console.log(`✨ Valid Traits Filtered: %c${validTraits.length}개`, 'color: #10b981; font-weight: bold');
+        console.group("[TFT DATA FETCH SUCCESS]");
+        console.log(
+          `Champions Loaded: %c${champions.length}개`,
+          "color: #3b82f6; font-weight: bold",
+        );
+        console.log(`Total Traits Fetched: ${traits.length}개`);
+        console.log(
+          `Valid Traits Filtered: %c${validTraits.length}개`,
+          "color: #10b981; font-weight: bold",
+        );
         console.dir({ champions, traits: traits });
         console.groupEnd();
       }
 
       set({ champions, traits: validTraits });
-    } 
-    catch (err) {
-      set({ error: '데이터 불러오기 실패' });
-    } 
-    finally {
+    } catch (err) {
+      set({ error: "데이터 불러오기 실패" });
+    } finally {
       set({ loading: false });
     }
   },
@@ -87,6 +96,31 @@ export const useTFTBuilderStore = create<State>((set, get) => ({
       return { fixedChampions: nextFixed };
     }),
 
+  toggleByCost: (cost: Cost) =>
+    set((state) => {
+      const nextSelected = new Set(state.selectedChampions);
+
+      const targetChampions = state.champions.filter(
+        (c) => c.cost === cost && !state.fixedChampions.has(c.id),
+      );
+
+      if (targetChampions.length === 0) return state;
+
+      const isAllSelected = targetChampions.every((c) =>
+        nextSelected.has(c.id),
+      );
+
+      targetChampions.forEach((c) => {
+        if (isAllSelected) {
+          nextSelected.delete(c.id);
+        } else {
+          nextSelected.add(c.id);
+        }
+      });
+
+      return { selectedChampions: nextSelected };
+    }),
+
   updateTraitCount: (name, count) =>
     set((state) => {
       const next = new Map(state.selectedTraits);
@@ -98,11 +132,12 @@ export const useTFTBuilderStore = create<State>((set, get) => ({
       return { selectedTraits: next };
     }),
 
-  clear: () => set({ 
-    selectedChampions: new Set(), 
-    fixedChampions: new Set(), 
-    selectedTraits: new Map()
-  }),
+  clear: () =>
+    set({
+      selectedChampions: new Set(),
+      fixedChampions: new Set(),
+      selectedTraits: new Map(),
+    }),
 
   clearSelected: () => set({ selectedChampions: new Set() }),
 
@@ -110,16 +145,16 @@ export const useTFTBuilderStore = create<State>((set, get) => ({
 
   clearTraits: () => set({ selectedTraits: new Map() }),
 
-  selectTeam: (ids: string[]) => 
+  selectTeam: (ids: string[]) =>
     set((state) => {
       const nextSelected = new Set<string>();
-      
+
       ids.forEach((id) => {
         if (!state.fixedChampions.has(id)) {
           nextSelected.add(id);
         }
       });
-      
+
       return { selectedChampions: nextSelected };
     }),
 }));

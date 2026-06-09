@@ -36,6 +36,8 @@ export default function TftWorkspace() {
     const activeSlide = container.children[activeIndex] as HTMLElement;
     if (!activeSlide) return;
 
+    container.style.willChange = "height";
+
     const resizeObserver = new ResizeObserver((entries) => {
       for (let entry of entries) {
         container.style.overflowY = "hidden";
