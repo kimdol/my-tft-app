@@ -1,28 +1,29 @@
-import type { JSX } from "react";
+import type { ElementType, HTMLAttributes, ReactNode } from "react";
 import { typography } from "../styles/typography";
 
 type TextVariant = keyof typeof typography;
 
-type Props = {
+interface TextProps extends HTMLAttributes<HTMLElement> {
   variant?: TextVariant;
-  as?: keyof JSX.IntrinsicElements;
+  as?: ElementType;
   className?: string;
-  children: React.ReactNode;
-};
+  children: ReactNode;
+}
 
 export default function Text({
   variant = "body",
   as: Component = "span",
   className = "",
   children,
-}: Props) {
+  ...props
+}: TextProps) {
+  const isBody = variant === "body" ? "leading-tight" : "";
+  const variantClass = typography[variant] || "";
+
   return (
-    <Component 
-      className={`
-      ${typography[variant]} 
-      ${variant === 'body' ? 'leading-tight' : ''}
-      ${className}
-      `}
+    <Component
+      className={`${variantClass} ${isBody} ${className}`.trim()}
+      {...props}
     >
       {children}
     </Component>

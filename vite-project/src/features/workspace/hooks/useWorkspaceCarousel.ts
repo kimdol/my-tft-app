@@ -1,18 +1,20 @@
 import { useRef, useEffect } from "react";
-import {
-  useSelectorModeStore,
-  type SelectorMode,
-} from "../../store/useSelectorModeStore";
+import { useSelectorModeStore, type SelectorMode } from "../../store/useSelectorModeStore";
 
 export interface TabItem {
   id: SelectorMode;
   label: string;
 }
 
+const SWIPE_THRESHOLD = 6;
+const VERTICAL_SWIPE_RATIO = 1.3;
+const SNAP_TOLERANCE = 10;
+const BASE_SCROLL_DELAY = 200;
+const SCROLL_DELAY_PER_JUMP = 300;
+
 export const useWorkspaceCarousel = (tabs: TabItem[]) => {
   const { mode, setMode } = useSelectorModeStore();
   const containerRef = useRef<HTMLDivElement>(null);
-
   const isClickingRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -42,14 +44,12 @@ export const useWorkspaceCarousel = (tabs: TabItem[]) => {
 
       const currentX = e.touches[0].clientX;
       const currentY = e.touches[0].clientY;
-
       const dx = Math.abs(currentX - startX);
       const dy = Math.abs(currentY - startY);
 
-      if (dx > 6 || dy > 6) {
+      if (dx > SWIPE_THRESHOLD || dy > SWIPE_THRESHOLD) {
         isDirectionDetermined = true;
-
-        if (dy > dx * 1.3) {
+        if (dy > dx * VERTICAL_SWIPE_RATIO) {
           container.style.overflowX = "hidden";
           container.style.scrollSnapType = "none";
         }
@@ -93,7 +93,7 @@ export const useWorkspaceCarousel = (tabs: TabItem[]) => {
     const width = containerRef.current.clientWidth;
     const currentScrollLeft = containerRef.current.scrollLeft;
 
-    if (Math.abs(currentScrollLeft - width * index) > 10) {
+    if (Math.abs(currentScrollLeft - width * index) > SNAP_TOLERANCE) {
       containerRef.current.scrollTo({
         left: width * index,
         behavior: "smooth",
@@ -122,8 +122,7 @@ export const useWorkspaceCarousel = (tabs: TabItem[]) => {
       clearTimeout(timerRef.current);
     }
 
-    const delay = 200 + jumpCount * 300;
-
+    const delay = BASE_SCROLL_DELAY + jumpCount * SCROLL_DELAY_PER_JUMP;
     timerRef.current = setTimeout(() => {
       isClickingRef.current = false;
     }, delay);
@@ -136,7 +135,8 @@ export const useWorkspaceCarousel = (tabs: TabItem[]) => {
     if (clientWidth === 0) return;
 
     const snapOffset = scrollLeft % clientWidth;
-    const isSnapped = snapOffset < 10 || snapOffset > clientWidth - 10;
+    const isSnapped =
+      snapOffset < SNAP_TOLERANCE || snapOffset > clientWidth - SNAP_TOLERANCE;
 
     if (isSnapped) {
       const index = Math.round(scrollLeft / clientWidth);
@@ -153,10 +153,5 @@ export const useWorkspaceCarousel = (tabs: TabItem[]) => {
     };
   }, []);
 
-  return {
-    containerRef,
-    currentMode: mode,
-    handleTabClick,
-    handleScroll,
-  };
+  return { containerRef, currentMode: mode, handleTabClick, handleScroll };
 };

@@ -1,7 +1,19 @@
 import { layout } from "../../../styles/layout";
 import { getTraitStyle } from "../../../core/traitTierUtils";
+import type { TFTTrait } from "../../../api/tftApi";
 
-export default function TraitChip({ trait }: any) {
+export interface ActiveTraitData {
+  name: string;
+  count: number;
+  trait: TFTTrait;
+  tier: number;
+}
+
+interface TraitChipProps {
+  trait: ActiveTraitData;
+}
+
+export default function TraitChip({ trait }: TraitChipProps) {
   return (
     <div
       className={`${layout.traitChip} ${getTraitStyle(

@@ -1,10 +1,10 @@
 import { create } from "zustand";
 import type { Champion, Cost } from "../selector/champion-selector/types";
-import { fetchTFTData, type Trait } from "../api/tftApi";
+import { fetchTFTData, type TFTTrait } from "../api/tftApi";
 
 interface State {
   champions: Champion[];
-  traits: Trait[];
+  traits: TFTTrait[];
   selectedChampions: Set<string>;
   fixedChampions: Set<string>;
   selectedTraits: Map<string, number>;

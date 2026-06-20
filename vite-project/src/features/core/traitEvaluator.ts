@@ -1,5 +1,5 @@
 import type { Champion } from "../selector/champion-selector/types";
-import type { Trait } from "../api/tftApi";
+import type { TFTTrait } from "../api/tftApi";
 import { Node } from "./Node";
 
 export interface ScoreWeights {
@@ -15,7 +15,7 @@ const DEFAULT_WEIGHTS: ScoreWeights = {
 export const createTraitContext = (
   fixedChampions: Champion[],
   champions: Champion[],
-  traits: Trait[],
+  traits: TFTTrait[],
 ) => {
   const champMap = new Map(
     [...fixedChampions, ...champions].map((c) => [c.id, c]),
@@ -50,7 +50,7 @@ export const calcTraitScore = (
   fixedTraits: Map<string, number>,
   node: Node,
   champMap: Map<string, Champion>,
-  traitMap: Map<string, Trait>,
+  traitMap: Map<string, TFTTrait>,
   weights: ScoreWeights = DEFAULT_WEIGHTS,
 ): number => {
   const traitCount = getTraitCountMap(node, champMap);

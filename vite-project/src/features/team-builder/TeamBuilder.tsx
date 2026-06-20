@@ -4,11 +4,13 @@ import TeamResultList from "./components/TeamResultList";
 import { useTeamBuilder } from "./hooks/useTeamBuilder";
 
 export default function TeamBuilder() {
-  const { teamSize, setTeamSize, selectedTraits, results, run, loading } = useTeamBuilder();
+  const { 
+    teamSize, setTeamSize, selectedTraits, results, run, loading,
+    champMap, traitMap 
+  } = useTeamBuilder();
 
   return (
     <Stack>
-
       <TeamBuilderPanel
         teamSize={teamSize}
         setTeamSize={setTeamSize}
@@ -19,8 +21,9 @@ export default function TeamBuilder() {
       <TeamResultList 
         results={results} 
         selectedTraits={selectedTraits}
+        champMap={champMap}
+        traitMap={traitMap}
        />
-       
     </Stack>
   );
 }

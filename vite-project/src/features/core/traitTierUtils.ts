@@ -1,9 +1,9 @@
-import type { Trait } from "../api/tftApi";
+import type { TFTTrait } from "../api/tftApi";
 
 /**
  * 현재 활성화된 시너지가 몇 단계인지(index) 반환합니다.
  */
-export const getTraitTier = (trait: Trait, count: number): number => {
+export const getTraitTier = (trait: TFTTrait, count: number): number => {
   let tier = -1;
 
   for (let i = 0; i < trait.effects.length; i++) {
@@ -20,7 +20,7 @@ export const getTraitTier = (trait: Trait, count: number): number => {
 /**
  * 활성화된 시너지의 실제 '스타일 번호'를 반환합니다.
  */
-export const getTraitStyleNumber = (trait: Trait, count: number): number => {
+export const getTraitStyleNumber = (trait: TFTTrait, count: number): number => {
   let styleNumber = 0;
 
   for (const effect of trait.effects) {
@@ -37,7 +37,7 @@ export const getTraitStyleNumber = (trait: Trait, count: number): number => {
 /**
  * 스타일 번호에 따른 CSS 클래스를 반환합니다.
  */
-export const getTraitStyle = (trait: Trait, count: number) => {
+export const getTraitStyle = (trait: TFTTrait, count: number) => {
   const styleNum = getTraitStyleNumber(trait, count);
   
   if (styleNum <= 0) return "";

@@ -1,9 +1,9 @@
 import type { Champion } from '../selector/champion-selector/types';
-import type { Trait } from '../api/tftApi';
+import type { TFTTrait } from '../api/tftApi';
 import { Node } from './Node';
 import { calcTraitScore, createTraitContext } from './traitEvaluator';
 
-interface Result {
+export interface BeamSearchResult {
   node: Node;
   score: number;
 }
@@ -12,11 +12,11 @@ export const findBestCombinationBeam = (
   fixedChampions: Champion[],
   fixedTraits: Map<string, number>, 
   selectedChampions: Champion[],
-  traits: Trait[],
+  traits: TFTTrait[],
   targetDepth: number,
   beamWidth: number = 28,
   returnCount: number = 5
-): Result[] => {
+): BeamSearchResult[] => {
   const { champMap, traitMap } = createTraitContext(fixedChampions, selectedChampions, traits);
   const visited = new Set<string>();
 
@@ -25,7 +25,7 @@ export const findBestCombinationBeam = (
   
   visited.add(initialNode.key());
 
-  let currentLevel: Result[] = [{
+  let currentLevel: BeamSearchResult[] = [{
     node: initialNode,
     score: calcTraitScore(fixedTraits, initialNode, champMap, traitMap)
   }];
@@ -34,7 +34,7 @@ export const findBestCombinationBeam = (
   const actualBeamWidth = Math.max(beamWidth, returnCount);
 
   for (let depth = 0; depth < remainingDepth; depth++) {
-    const nextCandidates: Result[] = [];
+    const nextCandidates: BeamSearchResult[] = [];
 
     for (const { node: currentNode } of currentLevel) {
       for (const champ of selectedChampions) {

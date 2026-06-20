@@ -3,12 +3,12 @@ import Text from "../../ui/Text";
 import { NumberInput } from "../../ui/NumberInput";
 import Button from "../../ui/Button";
 
-type Props = {
+interface Props {
   teamSize: number;
   setTeamSize: (n: number) => void;
   run: () => void;
   loading: boolean;
-};
+}
 
 export default function TeamBuilderPanel({
   teamSize,
@@ -17,22 +17,19 @@ export default function TeamBuilderPanel({
   loading,
 }: Props) {
   const handleSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = Number(e.target.value);
+    const parsed = parseInt(e.target.value, 10);
+    let value = isNaN(parsed) ? 0 : parsed;
+    
     if (value > 15) value = 15;
     if (value < 0) value = 0;
+    
     setTeamSize(value);
   };
 
   return (
     <Panel className="flex items-stretch gap-4">
       <div
-        className="
-          flex items-center gap-4 
-          px-6 py-4 
-          bg-white/5 rounded-2xl
-          w-full
-          max-w-[520px]
-        "
+        className="flex items-center gap-4 px-6 py-4 bg-white/5 rounded-2xl w-full max-w-[520px]"
       >
         <Text variant="heading">인원 수</Text>
         <div className="relative flex-1">
@@ -48,20 +45,12 @@ export default function TeamBuilderPanel({
       <Button
         onClick={run}
         loading={loading}
-        className="
-          min-w-[220px]
-          min-h-[72px]
-          px-8
-          h-auto
-          shrink-0
-        "
+        className="min-w-[220px] min-h-[72px] px-8 h-auto shrink-0"
       >
-        <Text variant="heading" className="    text-black text-[28px] tracking-[-0.02em]">
+        <Text variant="heading" className="text-black text-[28px] tracking-[-0.02em]">
           {loading ? "조합 분석 중..." : "최적 팀 구성 →"}
         </Text>
       </Button>
     </Panel>
   );
 }
-
-

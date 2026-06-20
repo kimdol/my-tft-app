@@ -1,10 +1,10 @@
-import type { Champion, Trait } from '../../selector/champion-selector/types';
-
+import type { Champion, Cost } from '../../selector/champion-selector/types';
+import type { RawSetData, RawChampion, TFTTrait } from '../tftApi';
 
 export const getAdditionalTraitChampions = (
   originalChampions: Champion[],
-  rawSetData: any,
-  allTraits: Trait[]
+  rawSetData: RawSetData,
+  allTraits: TFTTrait[]
 ): Champion[] => {
   const additionalChampions: Champion[] = [];
 
@@ -12,7 +12,7 @@ export const getAdditionalTraitChampions = (
     .map((t) => t.name)
     .sort((a, b) => b.length - a.length);
 
-  rawSetData.champions.forEach((rawChamp: any) => {
+  rawSetData.champions.forEach((rawChamp: RawChampion) => {
     const hasSelectionTrait = rawChamp.traits?.includes('특성 선택');
     if (!hasSelectionTrait) return;
 
@@ -39,7 +39,7 @@ export const getAdditionalTraitChampions = (
         id: `${rawChamp.apiName}_${traitName}`, 
         baseId: rawChamp.apiName,
         name: `${rawChamp.name} (${traitName})`,
-        cost: rawChamp.cost,
+        cost: rawChamp.cost as Cost,
 
         imageUrl: originalChamp?.imageUrl || '',
         traits: [

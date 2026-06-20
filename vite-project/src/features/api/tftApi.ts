@@ -1,23 +1,52 @@
-import type { Champion } from "../selector/champion-selector/types";
+import type { Champion, Cost } from "../selector/champion-selector/types";
 import { getAdditionalTraitChampions } from "./utils/tftUtils";
 import { sortChampionsByCost } from "./utils/sortUtils";
 
 
-interface Effect {
+export interface RawEffect {
+  minUnits: number;
+  style: number;
+}
+
+export interface RawTrait {
+  apiName: string;
+  name: string;
+  icon: string;
+  effects: RawEffect[];
+}
+
+export interface RawAbility {
+  desc?: string;
+}
+
+export interface RawChampion {
+  apiName: string;
+  name: string;
+  cost: number;
+  traits?: string[];
+  ability?: RawAbility;
+}
+
+export interface RawSetData {
+  champions: RawChampion[];
+  traits: RawTrait[];
+}
+
+interface TraitEffect {
   breakpoint: number;
   style: number;
 }
 
-export interface Trait {
+export interface TFTTrait {
   apiName: string;
   name: string;
-  effects: Effect[];
+  effects: TraitEffect[];
   iconUrl: string;
 }
 
 export interface TFTData {
   champions: Champion[];
-  traits: Trait[];
+  traits: TFTTrait[];
 }
 
 export const fetchTFTData = async (): Promise<TFTData> => {
@@ -32,7 +61,7 @@ export const fetchTFTData = async (): Promise<TFTData> => {
   const setKeys = Object.keys(data.sets || {}).filter(key => !isNaN(Number(key)));
   const latestSetNum = Math.max(...setKeys.map(Number));
 
-  const currentSet = data.sets?.[latestSetNum.toString()]
+  const currentSet: RawSetData | undefined = data.sets?.[latestSetNum.toString()]
 
   if (!currentSet) {
     return { champions: [], traits: [] };
@@ -45,7 +74,7 @@ export const fetchTFTData = async (): Promise<TFTData> => {
   // =========================
   const traitMap = new Map<string, string>();
 
-  const traits: Trait[] = currentSet.traits.map((trait: any) => {
+  const traits: TFTTrait[] = currentSet.traits.map((trait: RawTrait) => {
     const fileName =
       trait.icon.split("/").pop()?.toLowerCase().replace(".tex", ".png") || "";
 
@@ -53,9 +82,9 @@ export const fetchTFTData = async (): Promise<TFTData> => {
 
     traitMap.set(trait.name, iconUrl);
 
-    const effects: Effect[] = [...trait.effects]
-      .sort((a: any, b: any) => a.minUnits - b.minUnits)
-      .map((e: any) => ({
+    const effects: TraitEffect[] = [...trait.effects]
+      .sort((a: RawEffect, b: RawEffect) => a.minUnits - b.minUnits)
+      .map((e: RawEffect) => ({
         breakpoint: e.minUnits,
         style: e.style,
       }));
@@ -72,19 +101,19 @@ export const fetchTFTData = async (): Promise<TFTData> => {
   // 2. Champion 가공
   // =========================
   const champions: Champion[] = currentSet.champions
-    .filter((c: any) => c.traits && c.traits.length > 0)
-    .map((c: any) => {
+    .filter((c: RawChampion) => c.traits && c.traits.length > 0)
+    .map((c: RawChampion) => {
       const champApiName = c.apiName.replace(/^TFT\d+_/i, "").toLowerCase();
 
       return {
         id: c.apiName,
         baseId: c.apiName,
         name: c.name,
-        cost: c.cost,
+        cost: c.cost as Cost,
 
         imageUrl: `${BASE_URL}/tft/championsplashes/patching/tft${latestSetNum}_${champApiName}_teamplanner_splash.tft_set${latestSetNum}.png`,
 
-        traits: c.traits.map((tName: string) => ({
+        traits: (c.traits || []).map((tName: string) => ({
           name: tName,
           iconUrl: traitMap.get(tName) || "",
         })),

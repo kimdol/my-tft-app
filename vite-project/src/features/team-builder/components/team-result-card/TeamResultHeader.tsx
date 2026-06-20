@@ -1,7 +1,12 @@
 import Text from "../../../ui/Text";
 import Button from "../../../ui/Button";
 
-export default function TeamResultHeader({ score, onApply }: any) {
+interface TeamResultHeaderProps {
+  score: number;
+  onApply: () => void;
+}
+
+export default function TeamResultHeader({ score, onApply }: TeamResultHeaderProps) {
   return (
     <div className="flex justify-between items-center mb-6">
       <div className="flex flex-col">

@@ -1,11 +1,11 @@
-import type { Trait } from "../../../api/tftApi";
+import type { TFTTrait } from "../../../api/tftApi";
 import { useTFTBuilderStore } from "../../../store/useTFTBuilderStore";
 import { radius } from "../../../styles/tokens";
 import TraitProfile from "./TraitProfile";
 import Stepper from "./Stepper";
 
 interface Props {
-  trait: Trait;
+  trait: TFTTrait;
 }
 
 export default function TraitItem({ trait }: Props) {

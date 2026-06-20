@@ -1,14 +1,19 @@
 import Text from "../../ui/Text";
-
 import ResponsiveGrid from "../../ui/ResponsiveGrid";
 import { TeamResultCard } from "./team-result-card";
 
+import type { BeamSearchResult } from "../../core/beamSearchOptimizer";
+import type { Champion } from "../../selector/champion-selector/types";
+import type { TFTTrait } from "../../api/tftApi";
+
 interface Props {
   selectedTraits: Map<string, number>;
-  results: any[];
+  results: BeamSearchResult[];
+  champMap: Map<string, Champion>;
+  traitMap: Map<string, TFTTrait>;
 }
 
-export default function TeamResultList({ selectedTraits, results }: Props) {
+export default function TeamResultList({ selectedTraits, results, champMap, traitMap }: Props) {
   if (!results || results.length === 0) {
     return (
       <Text as="div" variant="body" className="text-center opacity-80 py-12 pb-24">
@@ -20,8 +25,14 @@ export default function TeamResultList({ selectedTraits, results }: Props) {
   return (
     <div className="pb-20">
       <ResponsiveGrid>
-        {results.map((r: any, i: number) => (
-          <TeamResultCard key={i} result={r} selectedTraits={selectedTraits} />
+        {results.map((r) => (
+          <TeamResultCard 
+            key={r.node.key()} 
+            result={r} 
+            selectedTraits={selectedTraits} 
+            champMap={champMap}
+            traitMap={traitMap}
+          />
         ))}
       </ResponsiveGrid>
     </div>

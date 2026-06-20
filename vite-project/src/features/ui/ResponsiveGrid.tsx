@@ -1,17 +1,20 @@
-export default function ResponsiveGrid({ children }: any) {
-  return (
-    <div className="
-      grid
-      
-      grid-cols-1
-      md:grid-cols-2 
-      xl:grid-cols-2
+import { forwardRef, type HTMLAttributes } from "react";
 
-      gap-4
+interface ResponsiveGridProps extends HTMLAttributes<HTMLDivElement> {}
 
-      justify-items-center
-    ">
-      {children}
-    </div>
-  );
-}
+const ResponsiveGrid = forwardRef<HTMLDivElement, ResponsiveGridProps>(
+  ({ children, className = "", ...props }, ref) => {
+    return (
+      <div
+        ref={ref}
+        className={`grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-4 justify-items-center ${className}`.trim()}
+        {...props}
+      >
+        {children}
+      </div>
+    );
+  }
+);
+ResponsiveGrid.displayName = "ResponsiveGrid";
+
+export default ResponsiveGrid;
