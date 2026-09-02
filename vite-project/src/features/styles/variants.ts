@@ -22,13 +22,10 @@ export const buttonVariants = {
     active:bg-white/10
     active:scale-[0.98]
 
-    focus:outline-none
-    focus:ring-0
-    focus:shadow-none
-
-    focus-visible:outline-none
-    focus-visible:ring-0
-    focus-visible:shadow-none
+    focus-visible:outline
+    focus-visible:outline-2
+    focus-visible:outline-offset-2
+    focus-visible:outline-white
   `,
   disabled: `
     bg-white/10 text-white/30 cursor-not-allowed

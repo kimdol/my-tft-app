@@ -1,6 +1,6 @@
 import type { HTMLAttributes } from "react";
 
-interface LabelProps extends HTMLAttributes<HTMLSpanElement> {}
+type LabelProps = HTMLAttributes<HTMLSpanElement>;
 
 export function Label({ children, className = "", ...props }: LabelProps) {
   return (

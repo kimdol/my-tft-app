@@ -1,6 +1,6 @@
 import { forwardRef, type HTMLAttributes } from "react";
 
-interface StackProps extends HTMLAttributes<HTMLDivElement> {}
+type StackProps = HTMLAttributes<HTMLDivElement>;
 
 const Stack = forwardRef<HTMLDivElement, StackProps>(
   ({ children, className = "", ...props }, ref) => {

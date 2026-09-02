@@ -1,0 +1,320 @@
+.tft-app.tft-app [role="tab"] {
+  background-color: transparent !important;
+  border-color: transparent !important;
+}
+
+.tft-app.tft-app [role="tab"][aria-selected="true"] {
+  background-color: #ffffff33 !important;
+  border-color: #ffffff66 !important;
+}
+
+.tft-app.tft-app [role="tab"][aria-selected="false"]:active {
+  background-color: #ffffff26 !important;
+}
+
+.tft-app.tft-app button[data-result-op-badge],
+.tft-app.tft-app button[data-champion-info-trigger],
+.tft-app.tft-app button[data-champion-info-trigger]:hover,
+.tft-app.tft-app button[data-champion-info-trigger]:focus,
+.tft-app.tft-app button[data-champion-info-trigger]:focus-visible,
+.tft-app.tft-app button[data-champion-info-trigger]:active,
+.tft-app.tft-app button[data-result-champion-detail-trigger],
+.tft-app.tft-app button[data-result-champion-detail-trigger]:hover,
+.tft-app.tft-app button[data-result-champion-detail-trigger]:focus,
+.tft-app.tft-app button[data-result-champion-detail-trigger]:focus-visible,
+.tft-app.tft-app button[data-result-champion-detail-trigger]:active,
+.tft-app.tft-app button[data-result-champion-remove],
+.tft-app.tft-app button[data-champion-card],
+.tft-app.tft-app button[data-champion-card]:hover,
+.tft-app.tft-app button[data-champion-card]:focus,
+.tft-app.tft-app button[data-champion-card]:focus-visible,
+.tft-app.tft-app button[data-champion-card]:active,
+.tft-app.tft-app button[data-tft-trait-chip],
+.tft-app.tft-app button[data-tft-trait-chip]:hover,
+.tft-app.tft-app button[data-tft-trait-chip]:focus,
+.tft-app.tft-app button[data-tft-trait-chip]:focus-visible,
+.tft-app.tft-app button[data-tft-trait-chip]:active,
+.tft-app.tft-app button[data-tft-popover-close] {
+  background-color: transparent !important;
+}
+
+.tft-app.tft-app button[data-result-champion-remove] {
+  background-color: #020617d9 !important;
+  border-color: #ffffff40 !important;
+  color: #ffffffb3 !important;
+}
+
+.tft-app.tft-app button[data-result-champion-remove]:hover,
+.tft-app.tft-app button[data-result-champion-remove]:focus,
+.tft-app.tft-app button[data-result-champion-remove]:focus-visible,
+.tft-app.tft-app button[data-result-champion-remove]:active {
+  background-color: #f43f5ee6 !important;
+  border-color: #fda4afcc !important;
+  color: #ffffff !important;
+}
+
+.tft-app.tft-app button[data-result-op-badge],
+.tft-app.tft-app button[data-champion-info-trigger] {
+  border-color: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.tft-app.tft-app button[data-tft-selection-chip="1"] {
+  background-color: #71717a1a !important;
+  border-color: #71717a !important;
+}
+
+.tft-app.tft-app button[data-tft-selection-chip="2"] {
+  background-color: #10b9811a !important;
+  border-color: #10b981 !important;
+}
+
+.tft-app.tft-app button[data-tft-selection-chip="3"] {
+  background-color: #0ea5e91a !important;
+  border-color: #0ea5e9 !important;
+}
+
+.tft-app.tft-app button[data-tft-selection-chip="4"] {
+  background-color: #8b5cf61a !important;
+  border-color: #8b5cf6 !important;
+}
+
+.tft-app.tft-app button[data-tft-selection-chip="5"] {
+  background-color: #f59e0b1a !important;
+  border-color: #f59e0b !important;
+}
+
+.tft-app.tft-app button[data-tft-trait-stepper] {
+  background-color: transparent !important;
+  border-color: transparent !important;
+}
+
+.tft-app.tft-app button[data-tft-trait-stepper]:focus,
+.tft-app.tft-app button[data-tft-trait-stepper]:focus-visible,
+.tft-app.tft-app button[data-tft-trait-stepper]:active {
+  background-color: #ffffff1a !important;
+}
+
+.tft-app.tft-app button[data-tft-trait-stepper]:disabled,
+.tft-app.tft-app button[data-tft-trait-stepper]:disabled:hover,
+.tft-app.tft-app button[data-tft-trait-stepper]:disabled:focus {
+  background-color: transparent !important;
+  border-color: transparent !important;
+}
+
+.tft-app.tft-app button[data-tft-shuffle-toggle] {
+  background-color: #ffffff0a !important;
+  border-color: #ffffff1a !important;
+}
+
+.tft-app.tft-app button[data-tft-shuffle-toggle]:hover,
+.tft-app.tft-app button[data-tft-shuffle-toggle]:focus,
+.tft-app.tft-app button[data-tft-shuffle-toggle]:focus-visible,
+.tft-app.tft-app button[data-tft-shuffle-toggle]:active {
+  background-color: #ffffff14 !important;
+  border-color: #ffffff26 !important;
+}
+
+.tft-app.tft-app button[data-tft-cost-toggle="1"][aria-pressed="false"] {
+  background-color: #71717a1a !important;
+  border-color: #71717a66 !important;
+  color: #d4d4d8 !important;
+}
+
+.tft-app.tft-app button[data-tft-cost-toggle="2"][aria-pressed="false"] {
+  background-color: #10b9811a !important;
+  border-color: #10b98166 !important;
+  color: #34d399 !important;
+}
+
+.tft-app.tft-app button[data-tft-cost-toggle="3"][aria-pressed="false"] {
+  background-color: #0ea5e91a !important;
+  border-color: #0ea5e966 !important;
+  color: #38bdf8 !important;
+}
+
+.tft-app.tft-app button[data-tft-cost-toggle="4"][aria-pressed="false"] {
+  background-color: #8b5cf61a !important;
+  border-color: #8b5cf666 !important;
+  color: #a78bfa !important;
+}
+
+.tft-app.tft-app button[data-tft-cost-toggle="5"][aria-pressed="false"] {
+  background-color: #f59e0b1a !important;
+  border-color: #f59e0b66 !important;
+  color: #fbbf24 !important;
+}
+
+.tft-app.tft-app button[data-tft-cost-toggle="1"][aria-pressed="true"] {
+  background-color: #71717a66 !important;
+  border-color: #a1a1aa !important;
+  color: #f4f4f5 !important;
+}
+
+.tft-app.tft-app button[data-tft-cost-toggle="2"][aria-pressed="true"] {
+  background-color: #10b98166 !important;
+  border-color: #34d399 !important;
+  color: #d1fae5 !important;
+}
+
+.tft-app.tft-app button[data-tft-cost-toggle="3"][aria-pressed="true"] {
+  background-color: #0ea5e966 !important;
+  border-color: #38bdf8 !important;
+  color: #e0f2fe !important;
+}
+
+.tft-app.tft-app button[data-tft-cost-toggle="4"][aria-pressed="true"] {
+  background-color: #8b5cf666 !important;
+  border-color: #a78bfa !important;
+  color: #ede9fe !important;
+}
+
+.tft-app.tft-app button[data-tft-cost-toggle="5"][aria-pressed="true"] {
+  background-color: #f59e0b66 !important;
+  border-color: #fbbf24 !important;
+  color: #fef3c7 !important;
+}
+
+.tft-app.tft-app button[data-tft-cost-toggle] {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tft-app.tft-app button[data-tft-cost-toggle]:focus,
+.tft-app.tft-app button[data-tft-cost-toggle]:focus-visible,
+.tft-app.tft-app button[data-tft-cost-toggle]:active {
+  background-image: none !important;
+}
+
+.tft-app.tft-app button[data-tft-button-variant="primary"] {
+  background-color: #ffffff !important;
+  border-color: transparent !important;
+  color: #000000 !important;
+}
+
+.tft-app.tft-app button[data-tft-button-variant="secondary"] {
+  background-color: #ffffff1a !important;
+  border-color: transparent !important;
+  color: #ffffff !important;
+}
+
+.tft-app.tft-app button[data-tft-button-variant="ghost"] {
+  background-color: transparent !important;
+  border-color: transparent !important;
+  color: #ffffff99 !important;
+}
+
+.tft-app.tft-app button[data-tft-button-variant="primary"]:hover {
+  background-color: #faf5ff !important;
+  color: #6b21a8 !important;
+}
+
+.tft-app.tft-app button[data-tft-button-variant="secondary"]:hover {
+  background-color: #9333ea !important;
+  color: #ffffff !important;
+}
+
+.tft-app.tft-app button[data-tft-button-variant="ghost"]:hover {
+  background-color: #ffffff0d !important;
+  color: #ffffff !important;
+}
+
+.tft-app.tft-app button[data-tft-button-variant]:disabled,
+.tft-app.tft-app button[data-tft-button-variant]:disabled:hover {
+  background-color: #ffffff1a !important;
+  color: #ffffff4d !important;
+}
+
+.tft-app.tft-app button[data-tft-clear-selection] {
+  background-color: #ef44441a !important;
+  border-color: #ef444433 !important;
+  color: #f87171 !important;
+}
+
+.tft-app.tft-app button[data-tft-clear-selection]:hover,
+.tft-app.tft-app button[data-tft-clear-selection]:focus,
+.tft-app.tft-app button[data-tft-clear-selection]:active {
+  background-color: #ef444433 !important;
+  border-color: #f87171 !important;
+  color: #fca5a5 !important;
+}
+
+.tft-app.tft-app button[data-tft-trait-reset] {
+  background-color: #ffffff0f !important;
+  border-color: #ffffff26 !important;
+  color: #ffffffb3 !important;
+}
+
+.tft-app.tft-app button[data-tft-trait-reset]:hover,
+.tft-app.tft-app button[data-tft-trait-reset]:focus,
+.tft-app.tft-app button[data-tft-trait-reset]:active {
+  background-color: #ffffff1a !important;
+  color: #ffffff !important;
+}
+
+.tft-app.tft-app button[data-tft-development-connect] {
+  background-color: #fde68a !important;
+  border-color: transparent !important;
+  color: #000000 !important;
+}
+
+.tft-app.tft-app button[data-tft-popover-close]:hover,
+.tft-app.tft-app button[data-tft-popover-close]:focus,
+.tft-app.tft-app button[data-tft-popover-close]:focus-visible,
+.tft-app.tft-app button[data-tft-popover-close]:active {
+  background-color: #ffffff1a !important;
+  color: #ffffff !important;
+}
+
+@media (hover: hover) {
+  .tft-app.tft-app [role="tab"][aria-selected="false"]:hover {
+    background-color: #ffffff1a !important;
+  }
+
+  .tft-app.tft-app button[data-tft-selection-chip="1"]:hover {
+    background-color: #71717a33 !important;
+  }
+
+  .tft-app.tft-app button[data-tft-selection-chip="2"]:hover {
+    background-color: #10b98133 !important;
+  }
+
+  .tft-app.tft-app button[data-tft-selection-chip="3"]:hover {
+    background-color: #0ea5e933 !important;
+  }
+
+  .tft-app.tft-app button[data-tft-selection-chip="4"]:hover {
+    background-color: #8b5cf633 !important;
+  }
+
+  .tft-app.tft-app button[data-tft-selection-chip="5"]:hover {
+    background-color: #f59e0b33 !important;
+  }
+
+  .tft-app.tft-app button[data-tft-cost-toggle="1"][aria-pressed="false"]:hover {
+    background-color: #71717a33 !important;
+  }
+
+  .tft-app.tft-app button[data-tft-cost-toggle="2"][aria-pressed="false"]:hover {
+    background-color: #10b98133 !important;
+  }
+
+  .tft-app.tft-app button[data-tft-cost-toggle="3"][aria-pressed="false"]:hover {
+    background-color: #0ea5e933 !important;
+  }
+
+  .tft-app.tft-app button[data-tft-cost-toggle="4"][aria-pressed="false"]:hover {
+    background-color: #8b5cf633 !important;
+  }
+
+  .tft-app.tft-app button[data-tft-cost-toggle="5"][aria-pressed="false"]:hover {
+    background-color: #f59e0b33 !important;
+  }
+}

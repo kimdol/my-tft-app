@@ -1,157 +1,288 @@
-import { useRef, useEffect } from "react";
-import { useSelectorModeStore, type SelectorMode } from "../../store/useSelectorModeStore";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import {
+  useSelectorModeStore,
+  type SelectorMode,
+} from "../../store/useSelectorModeStore";
+import { getAdjacentSwipeIndex } from "../carouselNavigation";
 
 export interface TabItem {
   id: SelectorMode;
   label: string;
 }
 
-const SWIPE_THRESHOLD = 6;
-const VERTICAL_SWIPE_RATIO = 1.3;
 const SNAP_TOLERANCE = 10;
-const BASE_SCROLL_DELAY = 200;
-const SCROLL_DELAY_PER_JUMP = 300;
+const SCROLL_SETTLE_TOLERANCE_PX = 2;
+const SCROLL_SETTLE_FALLBACK_MS = 900;
+
+export const getWorkspaceNavigationBehavior = (
+  viewportWidth: number,
+  prefersReducedMotion = false,
+): ScrollBehavior =>
+  prefersReducedMotion || viewportWidth < 640 ? "auto" : "smooth";
+
+const readWorkspaceNavigationBehavior = (): ScrollBehavior => {
+  if (typeof window === "undefined") return "auto";
+  return getWorkspaceNavigationBehavior(
+    window.innerWidth,
+    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false,
+  );
+};
 
 export const useWorkspaceCarousel = (tabs: TabItem[]) => {
-  const { mode, setMode } = useSelectorModeStore();
+  const mode = useSelectorModeStore((state) => state.mode);
+  const setMode = useSelectorModeStore((state) => state.setMode);
   const containerRef = useRef<HTMLDivElement>(null);
-  const isClickingRef = useRef(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isNavigatingRef = useRef(false);
+  const navigationFrameRef = useRef<number | null>(null);
+  const resizeFrameRef = useRef<number | null>(null);
+  const settleFrameRef = useRef<number | null>(null);
+  const settleTimerRef = useRef<number | null>(null);
+  const targetModeRef = useRef(mode);
+  const [mountedModes, setMountedModes] = useState<ReadonlySet<SelectorMode>>(
+    () => new Set([mode]),
+  );
 
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    let startX = 0;
-    let startY = 0;
-    let isDirectionDetermined = false;
-
-    const handleTouchStart = (e: TouchEvent) => {
-      if (isClickingRef.current) {
-        isClickingRef.current = false;
-        if (timerRef.current) clearTimeout(timerRef.current);
-      }
-
-      if (e.touches.length > 0) {
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-        isDirectionDetermined = false;
-      }
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (isDirectionDetermined || e.touches.length === 0) return;
-
-      const currentX = e.touches[0].clientX;
-      const currentY = e.touches[0].clientY;
-      const dx = Math.abs(currentX - startX);
-      const dy = Math.abs(currentY - startY);
-
-      if (dx > SWIPE_THRESHOLD || dy > SWIPE_THRESHOLD) {
-        isDirectionDetermined = true;
-        if (dy > dx * VERTICAL_SWIPE_RATIO) {
-          container.style.overflowX = "hidden";
-          container.style.scrollSnapType = "none";
-        }
-      }
-    };
-
-    const handleTouchEnd = () => {
-      container.style.overflowX = "auto";
-      container.style.scrollSnapType = "x mandatory";
-      isDirectionDetermined = false;
-    };
-
-    const cancelClickLock = () => {
-      if (isClickingRef.current) {
-        isClickingRef.current = false;
-        if (timerRef.current) clearTimeout(timerRef.current);
-      }
-    };
-
-    container.addEventListener("touchstart", handleTouchStart, { passive: true });
-    container.addEventListener("touchmove", handleTouchMove, { passive: true });
-    container.addEventListener("touchend", handleTouchEnd, { passive: true });
-    container.addEventListener("touchcancel", handleTouchEnd, { passive: true });
-    container.addEventListener("wheel", cancelClickLock, { passive: true });
-
-    return () => {
-      container.removeEventListener("touchstart", handleTouchStart);
-      container.removeEventListener("touchmove", handleTouchMove);
-      container.removeEventListener("touchend", handleTouchEnd);
-      container.removeEventListener("touchcancel", handleTouchEnd);
-      container.removeEventListener("wheel", cancelClickLock);
-    };
+  const mountMode = useCallback((targetMode: SelectorMode) => {
+    setMountedModes((currentModes) => {
+      if (currentModes.has(targetMode)) return currentModes;
+      const nextModes = new Set(currentModes);
+      nextModes.add(targetMode);
+      return nextModes;
+    });
   }, []);
 
-  useEffect(() => {
-    if (!containerRef.current || isClickingRef.current) return;
+  const cancelSettleWait = useCallback(() => {
+    if (settleFrameRef.current !== null) {
+      cancelAnimationFrame(settleFrameRef.current);
+      settleFrameRef.current = null;
+    }
 
-    const index = tabs.findIndex((tab) => tab.id === mode);
-    if (index === -1) return;
+    if (settleTimerRef.current !== null) {
+      window.clearTimeout(settleTimerRef.current);
+      settleTimerRef.current = null;
+    }
+  }, []);
 
-    const width = containerRef.current.clientWidth;
-    const currentScrollLeft = containerRef.current.scrollLeft;
+  const finishNavigation = useCallback(() => {
+    cancelSettleWait();
+    isNavigatingRef.current = false;
+  }, [cancelSettleWait]);
 
-    if (Math.abs(currentScrollLeft - width * index) > SNAP_TOLERANCE) {
-      containerRef.current.scrollTo({
-        left: width * index,
-        behavior: "smooth",
+  const waitForScrollSettle = useCallback(
+    (targetIndex: number) => {
+      cancelSettleWait();
+
+      const checkScrollPosition = () => {
+        const container = containerRef.current;
+        if (!container) {
+          finishNavigation();
+          return;
+        }
+
+        const targetLeft = container.clientWidth * targetIndex;
+        if (
+          Math.abs(container.scrollLeft - targetLeft) <=
+          SCROLL_SETTLE_TOLERANCE_PX
+        ) {
+          finishNavigation();
+          return;
+        }
+
+        settleFrameRef.current = requestAnimationFrame(checkScrollPosition);
+      };
+
+      settleFrameRef.current = requestAnimationFrame(checkScrollPosition);
+      settleTimerRef.current = window.setTimeout(
+        finishNavigation,
+        SCROLL_SETTLE_FALLBACK_MS,
+      );
+    },
+    [cancelSettleWait, finishNavigation],
+  );
+
+  const navigateTo = useCallback(
+    (targetMode: SelectorMode, targetIndex: number, behavior: ScrollBehavior) => {
+      const container = containerRef.current;
+      if (!container || targetMode === targetModeRef.current) return;
+
+      mountMode(targetMode);
+      targetModeRef.current = targetMode;
+      isNavigatingRef.current = true;
+      setMode(targetMode);
+
+      if (navigationFrameRef.current !== null) {
+        cancelAnimationFrame(navigationFrameRef.current);
+      }
+      navigationFrameRef.current = requestAnimationFrame(() => {
+        const currentContainer = containerRef.current;
+        navigationFrameRef.current = null;
+        if (!currentContainer) {
+          finishNavigation();
+          return;
+        }
+
+        currentContainer.scrollTo({
+          left: currentContainer.clientWidth * targetIndex,
+          behavior,
+        });
+        waitForScrollSettle(targetIndex);
       });
-    }
-  }, [mode, tabs]);
+    },
+    [finishNavigation, mountMode, setMode, waitForScrollSettle],
+  );
 
-  const handleTabClick = (targetMode: SelectorMode, index: number) => {
-    if (mode === targetMode) return;
+  const handleTabClick = useCallback(
+    (targetMode: SelectorMode, index: number) => {
+      navigateTo(targetMode, index, readWorkspaceNavigationBehavior());
+    },
+    [navigateTo],
+  );
 
-    const currentIndex = tabs.findIndex((tab) => tab.id === mode);
-    const jumpCount = Math.abs(index - currentIndex);
+  const handleScroll = useCallback(() => {
+    const container = containerRef.current;
+    if (!container || isNavigatingRef.current) return;
 
-    isClickingRef.current = true;
-    setMode(targetMode);
-
-    if (containerRef.current) {
-      const width = containerRef.current.clientWidth;
-      containerRef.current.scrollTo({
-        left: width * index,
-        behavior: "smooth",
-      });
-    }
-
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-    }
-
-    const delay = BASE_SCROLL_DELAY + jumpCount * SCROLL_DELAY_PER_JUMP;
-    timerRef.current = setTimeout(() => {
-      isClickingRef.current = false;
-    }, delay);
-  };
-
-  const handleScroll = () => {
-    if (!containerRef.current || isClickingRef.current) return;
-
-    const { scrollLeft, clientWidth } = containerRef.current;
+    const { scrollLeft, clientWidth } = container;
     if (clientWidth === 0) return;
 
     const snapOffset = scrollLeft % clientWidth;
     const isSnapped =
       snapOffset < SNAP_TOLERANCE || snapOffset > clientWidth - SNAP_TOLERANCE;
 
-    if (isSnapped) {
-      const index = Math.round(scrollLeft / clientWidth);
-      const currentMode = tabs[index]?.id;
-      if (currentMode && mode !== currentMode) {
-        setMode(currentMode);
-      }
-    }
-  };
+    if (!isSnapped) return;
+
+    const index = Math.round(scrollLeft / clientWidth);
+    const currentMode = tabs[index]?.id;
+    if (!currentMode) return;
+
+    targetModeRef.current = currentMode;
+    if (mode !== currentMode) setMode(currentMode);
+    mountMode(currentMode);
+  }, [mode, mountMode, setMode, tabs]);
 
   useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
+    const container = containerRef.current;
+    if (!container) return;
 
-  return { containerRef, currentMode: mode, handleTabClick, handleScroll };
+    let startPoint: { x: number; y: number } | null = null;
+
+    const handleTouchStart = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      if (!touch) return;
+
+      startPoint = { x: touch.clientX, y: touch.clientY };
+    };
+
+    const handleTouchEnd = (event: TouchEvent) => {
+      const touch = event.changedTouches[0];
+      if (!startPoint || !touch) {
+        startPoint = null;
+        return;
+      }
+
+      const currentIndex = tabs.findIndex((tab) => tab.id === mode);
+      const targetIndex = getAdjacentSwipeIndex({
+        currentIndex,
+        itemCount: tabs.length,
+        deltaX: touch.clientX - startPoint.x,
+        deltaY: touch.clientY - startPoint.y,
+      });
+
+      startPoint = null;
+
+      if (targetIndex !== currentIndex) {
+        const targetTab = tabs[targetIndex];
+        if (targetTab) handleTabClick(targetTab.id, targetIndex);
+      }
+    };
+
+    const handleTouchCancel = () => {
+      startPoint = null;
+    };
+
+    container.addEventListener("touchstart", handleTouchStart, { passive: true });
+    container.addEventListener("touchend", handleTouchEnd, { passive: true });
+    container.addEventListener("touchcancel", handleTouchCancel, { passive: true });
+
+    return () => {
+      container.removeEventListener("touchstart", handleTouchStart);
+      container.removeEventListener("touchend", handleTouchEnd);
+      container.removeEventListener("touchcancel", handleTouchCancel);
+    };
+  }, [handleTabClick, mode, tabs]);
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container || mode === targetModeRef.current) return;
+
+    const index = tabs.findIndex((tab) => tab.id === mode);
+    if (index < 0) return;
+
+    const frame = requestAnimationFrame(() => {
+      navigateTo(mode, index, readWorkspaceNavigationBehavior());
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [mode, navigateTo, tabs]);
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    let previousWidth = container.clientWidth;
+    const resizeObserver = new ResizeObserver(() => {
+      const nextWidth = container.clientWidth;
+      if (nextWidth === 0 || nextWidth === previousWidth) return;
+
+      previousWidth = nextWidth;
+      const index = tabs.findIndex((tab) => tab.id === mode);
+      if (index < 0) return;
+
+      if (resizeFrameRef.current !== null) {
+        cancelAnimationFrame(resizeFrameRef.current);
+      }
+
+      isNavigatingRef.current = true;
+      container.scrollTo({ left: nextWidth * index, behavior: "auto" });
+      resizeFrameRef.current = requestAnimationFrame(() => {
+        isNavigatingRef.current = false;
+        resizeFrameRef.current = null;
+      });
+    });
+
+    resizeObserver.observe(container);
+    return () => {
+      resizeObserver.disconnect();
+      if (resizeFrameRef.current !== null) {
+        cancelAnimationFrame(resizeFrameRef.current);
+        resizeFrameRef.current = null;
+      }
+    };
+  }, [mode, tabs]);
+
+  useEffect(
+    () => () => {
+      cancelSettleWait();
+      if (navigationFrameRef.current !== null) {
+        cancelAnimationFrame(navigationFrameRef.current);
+      }
+      if (resizeFrameRef.current !== null) {
+        cancelAnimationFrame(resizeFrameRef.current);
+      }
+    },
+    [cancelSettleWait],
+  );
+
+  return {
+    containerRef,
+    currentMode: mode,
+    mountedModes,
+    handleTabClick,
+    handleScroll,
+  };
 };

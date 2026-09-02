@@ -8,13 +8,14 @@ export const layout = {
 
   championGrid: `
     grid
-    grid-cols-[repeat(auto-fit,minmax(56px,68px))]
-    gap-1.5
-    mb-4
+    grid-cols-[repeat(auto-fill,minmax(126px,136px))]
+    sm:grid-cols-[repeat(auto-fill,minmax(132px,144px))]
+    auto-rows-fr
+    gap-2
   `,
 
   traitChip: `
-    flex items-center gap-1.5
+    inline-flex items-center gap-1.5
     px-2.5 py-1
     rounded-lg text-[12px]
     border font-bold

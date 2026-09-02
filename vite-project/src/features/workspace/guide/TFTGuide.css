@@ -1,0 +1,47 @@
+.tft-guide__reveal,
+.tft-guide__section {
+  animation: tft-guide-reveal 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.tft-guide__reveal:nth-of-type(2) {
+  animation-delay: 70ms;
+}
+
+.tft-guide__section:nth-child(1) {
+  animation-delay: 100ms;
+}
+
+.tft-guide__section:nth-child(2) {
+  animation-delay: 140ms;
+}
+
+.tft-guide__section:nth-child(3) {
+  animation-delay: 180ms;
+}
+
+.tft-guide__section:nth-child(4) {
+  animation-delay: 220ms;
+}
+
+.tft-guide__section:nth-child(5) {
+  animation-delay: 260ms;
+}
+
+@keyframes tft-guide-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tft-guide__reveal,
+  .tft-guide__section {
+    animation: none;
+  }
+}

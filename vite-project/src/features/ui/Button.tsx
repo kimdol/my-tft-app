@@ -35,6 +35,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <button
         ref={ref}
+        data-tft-button-variant={variant}
         disabled={isDisabled}
         aria-busy={loading}
         className={baseClasses}

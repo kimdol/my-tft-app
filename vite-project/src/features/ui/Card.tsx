@@ -2,7 +2,7 @@ import type { HTMLAttributes } from "react";
 import { spacing, radius } from "../styles/tokens";
 import { cardVariants } from "../styles/variants";
 
-interface CardProps extends HTMLAttributes<HTMLDivElement> {}
+type CardProps = HTMLAttributes<HTMLDivElement>;
 
 export default function Card({ children, className = "", ...props }: CardProps) {
   const baseClasses = [

@@ -1,6 +1,6 @@
 import type { HTMLAttributes } from "react";
 
-interface FieldProps extends HTMLAttributes<HTMLDivElement> {}
+type FieldProps = HTMLAttributes<HTMLDivElement>;
 
 export default function Field({ children, className = "", ...props }: FieldProps) {
   return (

@@ -1,0 +1,113 @@
+.tft-app.tft-app {
+  container-type: inline-size;
+  container-name: tft-workspace;
+}
+
+.tft-app .tft-shell {
+  padding: 0.75rem;
+}
+
+.tft-app .tft-slide-content {
+  padding-inline: 0.25rem;
+}
+
+.tft-app .tft-control-panel {
+  flex-direction: column;
+}
+
+.tft-app .tft-run-button {
+  width: 100%;
+}
+
+.tft-app .tft-result-grid {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(100%, 21rem), 1fr)
+  );
+  align-items: start;
+  justify-items: center;
+  gap: 1rem;
+  width: 100%;
+  min-width: 0;
+  max-width: 61rem;
+  margin-inline: auto;
+}
+
+.tft-app .tft-result-grid > * {
+  width: 100%;
+  min-width: 0;
+  max-width: 30rem;
+}
+
+.tft-app .tft-scrollbar-subtle {
+  scrollbar-color: rgba(251, 113, 133, 0.68) rgba(255, 255, 255, 0.07);
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.tft-app .tft-scrollbar-subtle:hover {
+  scrollbar-color: rgba(253, 164, 175, 0.86) rgba(255, 255, 255, 0.1);
+}
+
+.tft-app .tft-scrollbar-subtle::-webkit-scrollbar {
+  width: 0.5rem;
+}
+
+.tft-app .tft-scrollbar-subtle::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 0.5rem;
+}
+
+.tft-app .tft-scrollbar-subtle::-webkit-scrollbar-thumb {
+  min-height: 2.5rem;
+  border: 2px solid #11131a;
+  border-radius: 0.5rem;
+  background: rgba(251, 113, 133, 0.68);
+}
+
+.tft-app .tft-scrollbar-subtle::-webkit-scrollbar-thumb:hover {
+  background: rgba(253, 164, 175, 0.86);
+}
+
+.tft-app .tft-scrollbar-subtle::-webkit-scrollbar-thumb:active {
+  background: rgba(254, 205, 211, 0.95);
+}
+
+@container tft-workspace (min-width: 36rem) {
+  .tft-app .tft-shell {
+    padding: 1.5rem;
+  }
+
+  .tft-app .tft-slide-content {
+    padding-inline: 0.5rem;
+  }
+}
+
+@container tft-workspace (min-width: 42rem) {
+  .tft-app .tft-control-panel {
+    flex-direction: row;
+  }
+
+  .tft-app .tft-run-button {
+    width: auto;
+    min-width: 13.75rem;
+    padding-inline: 2rem;
+  }
+}
+
+@container tft-workspace (min-width: 48rem) {
+  .tft-app .tft-slide-content {
+    padding-inline: 1.5rem;
+  }
+}
+
+@container tft-workspace (min-width: 64rem) {
+  .tft-app .tft-shell {
+    padding: 2.5rem;
+  }
+
+  .tft-app .tft-slide-content {
+    padding-inline: 2rem;
+  }
+}
