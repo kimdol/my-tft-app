@@ -1,10 +1,14 @@
-import type { Champion } from '../selector/champion-selector/types';
+import type { Champion } from "../domain/champion";
 
 export class Node {
-  path: string[];
+  private readonly path: readonly string[];
 
   constructor(init?: Iterable<string>) {
     this.path = init ? [...init].sort() : [];
+  }
+
+  [Symbol.iterator](): IterableIterator<string> {
+    return this.path[Symbol.iterator]();
   }
 
   hasBaseId(baseId: string, champMap: Map<string, Champion>): boolean {
@@ -28,8 +32,8 @@ export class Node {
   }
 
   static merge(a: Node, b: Node): Node {
-    let result = new Node(a.path);
-    for (const id of b.path) {
+    let result = new Node(a);
+    for (const id of b) {
       result = result.push(id);
     }
     return result;

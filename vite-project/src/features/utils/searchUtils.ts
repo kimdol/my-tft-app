@@ -1,6 +1,10 @@
 import type { Champion } from "../selector/champion-selector/types";
 import { getChosung } from "./hangul";
 
+interface ChampionSearchLocalizer {
+  readonly championName?: (champion: Champion) => string;
+  readonly traitName?: (trait: Champion["traits"][number]) => string;
+}
 
 const isMatchString = (target: string, query: string): boolean => {
   const lowerTarget = target.toLowerCase();
@@ -14,17 +18,30 @@ const isMatchString = (target: string, query: string): boolean => {
 };
 
 
-export const filterChampionsByQuery = (champions: Champion[], query: string): Champion[] => {
+export const filterChampionsByQuery = (
+  champions: Champion[],
+  query: string,
+  localizer: ChampionSearchLocalizer = {},
+): Champion[] => {
   if (!query || !query.trim()) return champions;
 
   const lowerQuery = query.toLowerCase().trim();
 
   return champions.filter((champion) => {
-    if (isMatchString(champion.name, lowerQuery)) return true;
+    const championNames = [
+      champion.name,
+      localizer.championName?.(champion),
+    ].filter((name): name is string => Boolean(name));
+    if (championNames.some((name) => isMatchString(name, lowerQuery))) {
+      return true;
+    }
 
-    const hasMatchingTrait = champion.traits.some((trait) => 
-      isMatchString(trait.name, lowerQuery)
-    );
+    const hasMatchingTrait = champion.traits.some((trait) => {
+      const traitNames = [trait.name, localizer.traitName?.(trait)].filter(
+        (name): name is string => Boolean(name),
+      );
+      return traitNames.some((name) => isMatchString(name, lowerQuery));
+    });
 
     return hasMatchingTrait;
   });

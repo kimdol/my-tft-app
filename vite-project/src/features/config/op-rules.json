@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "opConfigVersion": "cost-star-strict-v3-server",
+  "roleConfigVersion": "unified-role-v3-external-auto-overrides",
+  "starConfigVersion": "riot-base-stat-scaling-v1",
+  "comparableStats": [
+    "attackDamage",
+    "attackSpeed",
+    "armor",
+    "magicResistance"
+  ],
+  "minimumMatchedStatCount": 1,
+  "comparison": "strictly-greater",
+  "starMultipliers": {
+    "health": { "1": 1, "2": 1.8, "3": 3.24 },
+    "attackDamage": { "1": 1, "2": 1.5, "3": 2.25 }
+  },
+  "targetRules": {
+    "1": {
+      "starLevel": 3,
+      "primary": { "cost": 5, "starLevel": 2, "source": "five-cost-two-star" },
+      "fallback": null
+    },
+    "2": {
+      "starLevel": 3,
+      "primary": { "cost": 5, "starLevel": 2, "source": "five-cost-two-star" },
+      "fallback": null
+    },
+    "3": {
+      "starLevel": 3,
+      "primary": { "cost": 5, "starLevel": 3, "source": "five-cost-three-star" },
+      "fallback": { "cost": 4, "starLevel": 3, "source": "four-cost-three-star" }
+    },
+    "4": {
+      "starLevel": 2,
+      "primary": { "cost": 5, "starLevel": 3, "source": "five-cost-three-star" },
+      "fallback": { "cost": 4, "starLevel": 3, "source": "four-cost-three-star" }
+    },
+    "5": {
+      "starLevel": 2,
+      "primary": { "cost": 5, "starLevel": 3, "source": "five-cost-three-star" },
+      "fallback": { "cost": 4, "starLevel": 3, "source": "four-cost-three-star" }
+    }
+  }
+}
