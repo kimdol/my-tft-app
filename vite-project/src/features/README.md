@@ -1,73 +1,64 @@
-# TFT 팀 조합 추천기 — 프런트엔드 아키텍처와 문제 해결 기록
+# TFT 팀 조합 추천기 — 프런트엔드 아키텍처 포트폴리오
 
 1인 개발 프로젝트 · 2026.01.05 ~ 진행 중
 
-사용자가 선택한 후보 유닛, 반드시 포함할 고정 유닛, 추가 상징 수량을 바탕으로 특성 breakpoint가 높은 팀을 추천하는 React 애플리케이션입니다. WordPress 플러그인으로 웹에 배포하면서 같은 빌드 결과를 Capacitor Android 앱에서도 사용합니다.
+사용자가 선택한 후보 유닛, 반드시 포함할 고정 유닛, 추가 상징을 조합해 높은 특성 점수를 만드는 팀을 추천하는 React 애플리케이션입니다. 같은 프런트엔드 빌드를 WordPress 웹과 Capacitor Android에서 사용하며, 시즌 데이터와 운영 설정은 런타임에 갱신합니다.
 
 처음에는 챔피언을 고르고 계산 버튼을 누르면 끝나는 화면이라고 생각했습니다. 후보가 적고 화면이 하나일 때는 실제로 그렇게 동작했습니다. 하지만 후보 수를 늘리자 계산 시간이 눈에 띄게 길어졌고, 탭을 오가며 선택을 바꾸면 서로 다른 화면의 상태가 어긋나기 시작했습니다. 개발 서버에서 멀쩡하던 버튼과 스크롤은 WordPress에 올리자 달라졌고, 같은 React 빌드를 사용하는 Android 앱이 서버와 다른 시즌 데이터를 보여 주는 경우도 생겼습니다.
 
-그때부터 기능을 더 붙이는 것보다, 문제가 생긴 경계를 하나씩 다시 정하는 데 더 많은 시간을 썼습니다. 아래에는 완성된 구조만 기능별로 나열하지 않고, 처음 어떤 방식으로 만들었는지, 실제 사용 중 무엇이 어긋났는지, 확인한 원인을 바탕으로 어떤 선택을 다시 했는지를 다섯 가지 사례로 정리했습니다.
+그때부터 기능을 더 붙이는 것보다, 문제가 생긴 경계를 하나씩 다시 정하는 데 더 많은 시간을 썼습니다. 이 문서는 `src/features`의 현재 구현만을 대상으로 하며, 알고리즘·상태 흐름·디자인 패턴·운영 안정성·웹 플랫폼 설계를 다섯 가지 사례로 정리합니다.
 
 ## 전체 구조
 
 ```mermaid
 flowchart TB
-    Source["CommunityDragon 원본 데이터"] --> Sync["WordPress 동기화 · 정규화 · OP 계산 · 이미지 저장"]
-    AdminSettings["WordPress 관리자 계산 설정"] --> Sync
-    Sync --> Dataset["Dataset REST snapshot"]
-    Sync --> Translations["언어별 Translation REST catalog"]
+    Runtime["WordPress Runtime API"] --> Dataset["Dataset Boundary"]
+    Runtime --> Settings["Runtime Settings"]
+    Runtime --> Translations["Translation Catalog"]
 
-    subgraph Client["동일한 React 클라이언트 · WordPress Web / Capacitor Android"]
-        Config["런타임 주소 · 빔 설정 해석"]
-        Boundary["스키마 · 개수 · 이미지 경로 검증"]
-        DataStore["TFTBuilderStore"]
-        I18n["AppI18nProvider"]
-        Workspace["탭 · 선택기 · 반응형 워크스페이스"]
-        Actions["사용자 Action"]
-        RecommendationStore["RecommendationStore"]
-        Beam["Beam Search · 특성 점수 계산"]
-        Result["추천 결과 · 통합 상세 Popover"]
+    subgraph Client["React Feature Architecture"]
+        Dataset --> BuilderStore["TFTBuilderStore"]
+        Settings --> SettingsStore["RuntimeSettingsStore"]
+        Translations --> I18n["AppI18nProvider"]
 
-        Config --> Boundary
-        Boundary --> DataStore
+        Workspace["Workspace and Selectors"] -->|Action| BuilderStore
+        Workspace -->|Action| RecommendationStore["RecommendationStore"]
+        BuilderStore --> TeamBuilder["useTeamBuilder"]
+        SettingsStore --> TeamBuilder
+        RecommendationStore --> TeamBuilder
+        TeamBuilder --> Optimizer["Beam Search Optimizer"]
+        Optimizer --> RecommendationStore
+        RecommendationStore --> Result["Result Cards"]
+        BuilderStore --> Workspace
         I18n --> Workspace
-        DataStore --> Workspace
-        Workspace --> Actions
-        Actions --> DataStore
-        Actions --> RecommendationStore
-        DataStore --> Beam
-        RecommendationStore --> Beam
-        Beam --> RecommendationStore
-        RecommendationStore --> Result
-        Result --> Actions
+        I18n --> Result
+        Result -->|Selection Action| BuilderStore
+        Result --> Details["Shared Detail Popover"]
     end
 
-    Dataset --> Config
-    AdminSettings --> Config
-    Translations --> I18n
+    Browser["Browser and Android WebView"] --> Workspace
 ```
 
 | 영역 | 책임 | 대표 코드 |
 |---|---|---|
-| API 경계 | 런타임 주소 해석, 응답 검증, 요청 병합, 마지막 정상 snapshot 보존 | [`api/tftApi.ts`](./api/tftApi.ts) |
-| 계산 코어 | 조합 상태 정규화, Beam Search, breakpoint 점수와 활성 특성 계산 | [`core`](./core) |
-| Flux 스타일 상태 | 서버 데이터, 하위 탭별 사용자 선택, 화면 모드, 추천 snapshot과 action 관리 | [`store`](./store), [`team-builder/recommendationStore.ts`](./team-builder/recommendationStore.ts) |
-| 국제화 | 기기 언어, 수동 선택, 번들 fallback, WordPress 실시간 번역 결합 | [`i18n`](./i18n) |
-| 웹 UI | 선택 전략, 점진 렌더링, 탭·캐러셀, Portal 상세 정보, WordPress CSS 격리 | [`selector`](./selector), [`workspace`](./workspace), [`details`](./details) |
+| 런타임 경계 | 환경별 endpoint 해석, 외부 JSON 검증, 요청 병합, 마지막 정상 snapshot 보존 | [`api/tftApi.ts`](./api/tftApi.ts), [`config/runtimeSettings.ts`](./config/runtimeSettings.ts) |
+| 도메인·알고리즘 | 챔피언 모델, 특성 breakpoint 평가, Beam Search | [`domain`](./domain), [`core`](./core) |
+| Flux 스타일 상태 | 서버 데이터, 하위 탭별 선택, 추천 snapshot과 action 관리 | [`store`](./store), [`team-builder/recommendationStore.ts`](./team-builder/recommendationStore.ts) |
+| 표현 계층 | 선택 전략, 다국어, 반응형 workspace, Portal 상세 정보 | [`selector`](./selector), [`i18n`](./i18n), [`workspace`](./workspace), [`details`](./details) |
 
 ## 기술 스택
 
 - React 19, TypeScript, Vite
-- Zustand
-- Tailwind CSS
-- WordPress REST API
-- Capacitor Android
+- Zustand 기반 Flux 스타일 상태 관리
+- Tailwind CSS와 범위가 제한된 WordPress 호스트 격리 CSS
+- WordPress REST API 런타임 데이터
+- Capacitor Android WebView
 
-## 포트폴리오로 고른 다섯 가지 문제 해결
+## 포트폴리오 핵심 설계 5가지
 
 각 사례는 성공한 최종 구조부터 설명하기보다 `처음 선택한 방식 → 실제로 마주친 증상 → 원인을 확인한 과정 → 바꾼 구조 → 결과와 남은 선택`이 자연스럽게 이어지도록 정리했습니다.
 
-### 1. 전수조사 대신 Beam Search로 탐색량을 통제했다
+### 1. 알고리즘 — 조합 폭발을 Beam Search로 제한했다
 
 처음에는 고정 유닛을 먼저 넣고 후보 `c`명 중 남은 `d`명을 전부 조합한 뒤, 가장 높은 점수의 팀을 고르면 된다고 생각했습니다. 후보가 적을 때는 결과도 정확했고 속도도 문제없었습니다. 그런데 후보를 하나씩 늘려 직접 계산해 보니 어느 순간부터 버튼을 누른 뒤 기다리는 시간이 빠르게 길어졌습니다. 후보 50명 중 8명을 고르는 경우를 계산해 보니 가능한 조합만 536,878,650개였습니다. 팀 점수를 더 빠르게 계산하기 전에, 그 계산 자체를 몇 번 반복할 것인지부터 줄여야 했습니다.
 
@@ -78,21 +69,46 @@ flowchart TB
 현재 기본 빔 너비 28과 결과 5개는 WordPress 관리자에서 조정하며, 웹과 앱은 실행할 때 이 값을 받아 계산합니다. 팀 하나의 생성·평가 비용을 `P`라고 하면 시간 복잡도는 전수조사의 `O(C(c,d) × P)`에서 `O(d × b × c × (P + log(b × c)))`로 제한됩니다. 전역 최적해를 항상 보장하지 않는다는 선택은 남았지만, 실제 사용자가 기다릴 수 있는 시간과 결과 품질 사이의 균형을 재배포 없이 운영값으로 조절할 수 있게 됐습니다.
 
 ```mermaid
-flowchart TD
-    Goal["목표 · 제한 시간 안에 최고 점수 팀 추천"] --> Exhaustive["1차 선택 · nCr 전수조사"]
-    Exhaustive --> CombinationProblem["문제 · C(c,d) 조합 폭증"]
-    CombinationProblem --> Dijkstra["2차 검토 · 다익스트라로 경로화"]
-    Dijkstra --> GraphProblem["문제 · 점수가 부분집합 전체에 의존<br/>고정 간선 비용과 비음수 최단 경로 조건 불충족"]
-    GraphProblem --> Beam["해결 · 깊이마다 상위 b개만 유지"]
-    Beam --> Normalize["정렬 key · baseId · visited로 중복 제거"]
-    Normalize --> Evaluate["breakpoint · OP · 코스트 원시 점수 평가"]
-    Evaluate --> Limit["beam width 28 · 결과 최대 5개"]
-    Limit --> Complexity["O(C(c,d) × P)<br/>→ O(d × b × c × (P + log(b × c)))"]
+classDiagram
+    direction LR
+    class BeamSearchOptimizer {
+        +findBestCombinationBeam()
+        -visited
+        -beamWidth
+        -resultLimit
+    }
+    class Node {
+        -path
+        +push(id)
+        +hasBaseId(baseId)
+        +key()
+        +toArray()
+    }
+    class TraitEvaluator {
+        +createTraitContext()
+        +calcTraitScoreBreakdown()
+        +createActiveTraitDetails()
+    }
+    class CandidateOrder {
+        +createShuffleSeed()
+        +seededShuffle()
+    }
+    class BeamSearchResult {
+        +node
+        +score
+        +scoreBreakdown
+        +activeTraits
+    }
+
+    BeamSearchOptimizer --> Node : expands immutable states
+    BeamSearchOptimizer --> TraitEvaluator : scores each state
+    BeamSearchOptimizer --> CandidateOrder : optional tie exploration
+    BeamSearchOptimizer --> BeamSearchResult : returns ranked teams
 ```
 
 관련 코드: [`core/beamSearchOptimizer.ts`](./core/beamSearchOptimizer.ts), [`core/Node.ts`](./core/Node.ts), [`core/traitEvaluator.ts`](./core/traitEvaluator.ts), [`core/candidateOrder.ts`](./core/candidateOrder.ts)
 
-### 2. Flux 스타일 단방향 흐름으로 상태의 의미를 지켰다
+### 2. Flux — 입력과 결과의 수명을 단방향 상태 흐름으로 관리했다
 
 후보 화면과 고정 유닛 화면을 처음 만들 때는 각 컴포넌트가 필요한 local state를 따로 가지게 했습니다. 화면 하나만 볼 때는 가장 단순한 구조였습니다. 하지만 후보에서 고른 유닛을 고정 유닛으로 다시 선택해 보니 같은 `baseId`의 변형이 두 Set에 동시에 남았습니다. 한쪽에서 선택하면 다른 쪽에서 지우는 분기를 컴포넌트마다 붙였고, 이번에는 탭이 언마운트될 때 계산해 둔 추천 결과가 함께 사라졌습니다.
 
@@ -105,85 +121,167 @@ Chrome처럼 여러 추천 작업을 열 수 있는 하위 탭을 추가했을 �
 이제 첫 탭을 포함해 기본 3개의 작업을 따로 열어 비교할 수 있고, 탭 상한은 관리자 설정으로 바뀝니다. 선택 조회는 `Set.has` 기준 평균 `O(1)`, 불변 Set·Map 갱신은 선택 수 `k`에 대해 `O(k)`입니다. 탭을 오가도 각 작업은 그대로 복원되며, 그 결과를 만든 입력이나 운영 설정이 실제로 달라졌을 때만 해당 결과가 무효화됩니다.
 
 ```mermaid
-flowchart TB
-    User["사용자 입력"] --> View["React View"]
-    View -->|Action 전달| Action["Zustand Store Action"]
-    Action --> BuilderAction["후보 · 고정 · 상징 상태 전이"]
-    Action --> RecommendationAction["추천 실행 · 완료 · 실패 상태 전이"]
-    BuilderAction --> Invariant["동일 baseId를 반대 Set에서 제거<br/>새 데이터에 없는 ID 정리"]
-    Invariant --> BuilderStore["TFTBuilderStore의 다음 상태"]
-    BuilderStore --> Signature["현재 계산 입력으로 signature 생성"]
-    RecommendationAction --> Snapshot["결과 + 계산 당시 signature + 생성 시각"]
-    Signature --> Compare{"현재 signature와 같은가?"}
-    Snapshot --> Compare
-    Compare -->|같음| Current["현재 추천 결과 노출"]
-    Compare -->|다름| Stale["결과 숨김 · 재계산 필요"]
-    Current --> Selector["selector · hook으로 파생 상태 계산"]
-    Stale --> Selector
-    Selector --> Render["View 재렌더링"]
+classDiagram
+    direction LR
+    class View {
+        +renderSelectedState()
+        +dispatchAction()
+    }
+    class TFTBuilderStore {
+        +selectedChampions
+        +fixedChampions
+        +selectedTraits
+        +selectionSessions
+        +toggle()
+        +toggleFixed()
+        +activateSelectionSession()
+    }
+    class RecommendationStore {
+        +sessions
+        +activeTabId
+        +startRecommendation()
+        +completeRecommendation()
+        +invalidateRecommendation()
+    }
+    class RecommendationSignature {
+        +createRecommendationInputSignature()
+    }
+    class RecommendationSnapshot {
+        +results
+        +inputSignature
+        +generatedAt
+    }
+    class TeamBuilderHook {
+        +run()
+        +needsRecalculation
+    }
+
+    View --> TFTBuilderStore : dispatches selection actions
+    View --> RecommendationStore : dispatches tab actions
+    TFTBuilderStore --> TeamBuilderHook : supplies current input
+    RecommendationStore --> TeamBuilderHook : supplies active session
+    TeamBuilderHook --> RecommendationSignature : fingerprints input
+    RecommendationStore *-- RecommendationSnapshot : owns per tab
+    TeamBuilderHook --> RecommendationStore : commits valid result
 ```
 
 관련 코드: [`store/useTFTBuilderStore.ts`](./store/useTFTBuilderStore.ts), [`team-builder/recommendationStore.ts`](./team-builder/recommendationStore.ts), [`team-builder/recommendationSignature.ts`](./team-builder/recommendationSignature.ts), [`selector/champion-selector/selectorStrategies.ts`](./selector/champion-selector/selectorStrategies.ts)
 
-### 3. WordPress REST 응답을 신뢰 경계에서 검증했다
+### 3. 디자인 패턴 — Strategy로 후보와 고정 선택기의 중복을 제거했다
+
+후보 선택기와 고정 선택기는 검색, 선택 목록, 카드 그리드와 대부분의 UI가 같습니다. 하지만 읽어야 할 Set, 실행할 action, 반대편 선택 표시, 색상과 코스트 필터 노출 여부는 다릅니다. 두 화면을 복사하면 수정할 때마다 동작과 접근성 문구가 어긋나고, 하나의 컴포넌트에 mode 분기를 계속 추가하면 조건문이 모든 하위 컴포넌트로 퍼집니다.
+
+`ChampionSelectorStrategy`가 화면별 차이를 데이터와 함수로 캡슐화합니다. 후보·고정 전략은 어떤 store slice를 구독하고 어떤 action을 실행할지, 반대 선택을 어떻게 표시할지, 어떤 보조 필터를 노출할지 정의합니다. `ChampionSelector`와 `useChampionSelector`는 구체적인 mode를 모르고 전달받은 전략 계약만 사용합니다.
+
+이 구조는 Strategy 패턴을 React composition과 Zustand selector에 맞게 적용한 형태입니다. 새 선택 모드를 추가할 때 기존 그리드와 카드 로직에 조건문을 흩뿌리는 대신 새로운 전략을 제공하도록 변경 지점을 제한합니다. 단순 boolean prop보다 초기 타입 정의는 늘지만, 모드가 증가할수록 공통 UX와 접근성 동작의 회귀 범위가 작아집니다.
+
+```mermaid
+classDiagram
+    direction LR
+    class ChampionSelectorStrategy {
+        <<interface>>
+        +id
+        +selectSelected()
+        +selectOppositeSelected()
+        +selectToggle()
+        +selectClear()
+        +showCostToggle
+    }
+    class CandidateStrategy {
+        +id candidate
+        +selectToggle toggle
+        +showCostToggle true
+    }
+    class FixedStrategy {
+        +id fixed
+        +selectToggle toggleFixed
+        +showCostToggle false
+    }
+    class ChampionSelector {
+        +render(strategy)
+    }
+    class UseChampionSelector {
+        +readSelected(strategy)
+        +filterLocalizedQuery()
+    }
+    class TFTBuilderStore {
+        +toggle()
+        +toggleFixed()
+        +clearSelected()
+        +clearFixed()
+    }
+
+    ChampionSelectorStrategy <|.. CandidateStrategy
+    ChampionSelectorStrategy <|.. FixedStrategy
+    ChampionSelector --> ChampionSelectorStrategy : receives
+    ChampionSelector --> UseChampionSelector : delegates behavior
+    UseChampionSelector --> ChampionSelectorStrategy : resolves selectors
+    ChampionSelectorStrategy --> TFTBuilderStore : maps state and actions
+```
+
+관련 코드: [`selector/champion-selector/selectorStrategies.ts`](./selector/champion-selector/selectorStrategies.ts), [`selector/champion-selector/ChampionSelector.tsx`](./selector/champion-selector/ChampionSelector.tsx), [`selector/champion-selector/hooks/useChampionSelector.ts`](./selector/champion-selector/hooks/useChampionSelector.ts)
+
+### 4. 시니어 엔지니어링 — 런타임 데이터를 신뢰 경계에서 검증하고 실패를 격리했다
 
 웹과 Android 앱이 같은 React 코드를 사용하게 만든 초기에, REST가 HTTP 200만 반환하면 응답을 TypeScript 타입으로 단언해 바로 store에 넣었습니다. 정상 데이터만 오갈 때는 이 방식의 문제가 드러나지 않았습니다. 시즌 교체 상황을 확인하려고 일부 필드를 빼 보자 이전 schema와 metadata 개수 불일치가 그대로 통과했고, 외부 이미지 주소도 아무 검증 없이 렌더링됐습니다. 여러 화면을 한꺼번에 열면 같은 dataset 요청까지 중복으로 발생했습니다.
 
 가장 분명한 증상은 네트워크를 잠시 끊었다가 다시 연결했을 때 나타났습니다. 새 요청 한 번이 실패했다는 이유로 이미 정상적으로 보고 있던 데이터까지 화면에서 사라졌습니다. 이 흐름을 추적하면서 TypeScript 타입은 컴파일 시점의 약속일 뿐, 서버에서 들어오는 JSON을 실제로 검사해 주지 않는다는 점을 코드 경계에서 놓쳤다는 것을 확인했습니다. URL 해석, payload 검증, 중복 요청, 실패 복구가 각각의 호출부에 흩어져 있어 어느 시점부터 데이터를 믿어도 되는지도 분명하지 않았습니다.
 
-이후 API 모듈을 외부 데이터가 들어오는 신뢰 경계로 정했습니다. 응답은 먼저 `unknown`으로 받고 champion, trait, OP, metadata 구조와 schema version, 실제 배열 개수, 로컬 asset base까지 모두 확인한 뒤에만 도메인 모델로 바꿉니다. 동시에 들어온 호출은 하나의 in-flight Promise를 공유하게 했고, 새 요청이 실패하면 세션에 남아 있는 마지막 정상 snapshot을 유지합니다. focus·online·visibility가 돌아오는 시점에는 dataset과 관리자 계산 설정을 다시 확인하도록 복구 경로도 한곳에 묶었습니다.
+이후 API 모듈을 Anti-Corruption Layer이자 외부 데이터의 신뢰 경계로 정했습니다. 응답은 먼저 `unknown`으로 받고 champion, trait, OP, metadata 구조와 schema version, 실제 배열 개수, 허용 asset base까지 모두 확인한 뒤에만 domain model로 바꿉니다. 동시에 들어온 호출은 하나의 in-flight Promise를 공유하게 했고, 새 요청이 실패하면 현재 세션의 마지막 정상 snapshot을 유지합니다.
 
-OP 규칙은 WordPress가 snapshot을 만들 때 계산하고, 빔 너비·가중치·탭 상한은 별도 공개 설정 REST로 전달합니다. 관리자 값을 바꾼 뒤 웹과 앱을 다시 열어, 클라이언트를 재빌드하지 않아도 새 설정이 적용되는 것까지 확인했습니다. payload 요소 수를 `N`이라고 하면 검증은 시간 `O(N)`, 도메인 데이터와 조회 Map은 공간 `O(N)`이며, 여러 화면에서 동시에 요청해도 실제 진행 중인 네트워크 요청은 하나만 남습니다.
+운영 설정은 별도 parser에서 beam width, 결과 수, 팀 크기와 모든 가중치를 안전 범위로 제한하고 실패 시 번들 기본값을 유지합니다. 번역 catalog도 locale과 schema를 확인한 뒤 알려진 UI 구조만 병합하며 prototype 오염에 쓰일 수 있는 key를 거부합니다. focus·online·visibility가 돌아오는 시점에는 15초 중복 방지 창을 두고 dataset과 설정을 다시 검증합니다.
 
-```mermaid
-flowchart TD
-    Goal["목표 · 웹과 앱에서 같은 최신 데이터 사용"] --> Simple["1차 구현 · HTTP 200 응답을 타입 단언"]
-    Simple --> Failure["문제 · 잘못된 schema와 URL 통과<br/>중복 요청 · 일시 실패 시 화면 소실"]
-    Failure --> Boundary["해결 · API 모듈을 신뢰 경계로 통합"]
-    Boundary --> Resolve["환경별 runtime config 해석"]
-    Resolve --> Shared["동시 호출은 in-flight Promise 공유"]
-    Shared --> Validate["unknown → schema · 개수 · asset 경로 검증"]
-    Validate -->|정상| Normalize["도메인 모델 · OP 조회 Map 생성"]
-    Validate -->|실패| Fallback{"마지막 정상 snapshot이 있는가?"}
-    Fallback -->|예| Keep["기존 화면 유지"]
-    Fallback -->|아니오| Error["오류 상태 노출 · 다음 요청 재시도"]
-    Normalize --> Store["store 갱신 · 무효 선택 제거"]
-    Store --> Result["O(N) 검증 · 환경 공통 데이터 경로"]
-```
-
-관련 코드: [`api/tftApi.ts`](./api/tftApi.ts), [`workspace/hooks/useRuntimeDataRefresh.ts`](./workspace/hooks/useRuntimeDataRefresh.ts), [`store/useTFTBuilderStore.ts`](./store/useTFTBuilderStore.ts)
-
-### 4. 고정 UI 번역과 시즌 데이터를 분리해 다국어를 운영했다
-
-다국어를 처음 붙였을 때는 한국어, 영어, 일본어, 중국어 간체·번체의 UI 문구와 챔피언·특성 이름을 언어별 객체 하나에 모두 넣었습니다. 언어를 바꾸고 localStorage에서 복원하는 데까지는 잘 동작했습니다. 문제가 보인 것은 새 세트 데이터를 WordPress에 동기화한 뒤였습니다. 서버에는 새 챔피언이 들어왔지만 이미 설치된 앱은 번들에 남은 지난 시즌 이름을 보여 줬고, 번역 몇 줄을 고치기 위해 웹과 앱을 다시 빌드해야 했습니다.
-
-어떤 문자열이 얼마나 자주 바뀌는지 다시 나눠 보니, 버튼처럼 거의 고정된 UI 문구와 시즌마다 교체되는 게임 데이터가 같은 배포 주기에 묶여 있었습니다. 언어를 결정하는 순서도 저장된 수동 선택, 기기 언어, 서버 번역, 오프라인 fallback이 한 흐름 안에서 섞여 있었습니다. 저장소 접근을 막은 상태로 실행해 보자 첫 화면의 언어가 일정하지 않았고, 우선순위가 코드에 명확히 드러나지 않는다는 점도 확인했습니다.
-
-UI와 가이드는 앱 번들의 fallback으로 남기고, 시즌 챔피언명·특성명·특성 설명은 WordPress의 locale별 runtime catalog로 분리했습니다. 사용자가 직접 고른 언어가 있으면 가장 먼저 사용하고, 저장값이 없으면 `navigator.languages`를 해석합니다. 원격 catalog는 schema와 locale을 확인한 뒤 알려진 구조만 병합하며, prototype 오염에 쓰일 수 있는 key는 거부합니다. 같은 locale·endpoint 요청은 하나로 합치고 cache도 endpoint별로 나눴습니다.
-
-이 구조를 적용한 뒤에는 특성 선택 유닛에서 한 번 더 표시 문제가 생겼습니다. 서버는 미스 포츈을 선택 특성에 따라 3개 ID로 나누지만 번역 catalog에는 기본 이름만 있어서, 언어를 바꾸면 카드 이름 뒤의 괄호가 사라졌습니다. 이름 문자열을 다시 잘라 붙이는 방식은 언어마다 깨질 가능성이 있어 사용하지 않았습니다. 대신 각 변형이 가진 실제 특성 API ID로 현재 언어의 특성명을 찾아 `미스 포츈 (복제자)`, `Miss Fortune (Replicator)`처럼 조합하도록 수정했습니다.
-
-이제 고정 UI는 네트워크가 없어도 바로 표시되고, 시즌 문자열만 서버 동기화를 따라갑니다. catalog 문자열 수를 `K`라고 하면 검증·병합 시간과 cache 공간은 `O(K)`입니다. 저장소를 사용할 수 없는 환경에서는 현재 세션과 기기 언어를 사용하고, 앱을 삭제해 localStorage가 사라져도 기기 언어부터 다시 판단합니다.
+OP 규칙은 서버 snapshot에 포함하고 계산 파라미터는 별도 설정 REST로 분리해, 이미 설치된 앱도 재빌드 없이 새 시즌 데이터와 운영값을 적용합니다. payload 요소 수를 `N`이라고 하면 검증은 시간 `O(N)`, domain data와 조회 Map은 공간 `O(N)`입니다. 검증 비용을 네트워크 경계에서 한 번 지불하는 대신 잘못된 서버 상태가 UI 전체 장애로 확대되는 것을 막고, 실패 시 사용 가능한 마지막 화면을 보존합니다.
 
 ```mermaid
-flowchart TD
-    Goal["목표 · 5개 언어와 시즌 번역을 함께 운영"] --> Simple["1차 구현 · 모든 번역을 앱 번들에 포함"]
-    Simple --> Failure["문제 · 시즌마다 재빌드<br/>오래된 문자열 누적 · 서버와 앱 시점 불일치"]
-    Failure --> Split["해결 · 안정 UI와 시즌 데이터를 분리"]
-    Split --> Bundled["번들 · UI와 가이드 fallback"]
-    Split --> Runtime["WordPress · locale별 시즌 catalog"]
-    Split --> Manual["수동 선택 우선<br/>없으면 기기 언어 해석"]
-    Runtime --> Validate["schema · locale · 안전한 key 검증"]
-    Validate --> Cache["endpoint 단위 cache · 요청 병합"]
-    Bundled --> Merge["알려진 구조만 병합"]
-    Cache --> Merge
-    Manual --> Merge
-    Merge --> Result["즉시 UI + 최신 시즌 문자열<br/>시간·공간 O(K)"]
+classDiagram
+    direction LR
+    class RuntimeAPI {
+        +dataset
+        +settings
+        +translations
+    }
+    class TFTDataBoundary {
+        +resolveTftRuntimeConfig()
+        +parseTFTDatasetPayload()
+        +assertLocalAssetUrls()
+        +fetchTFTData()
+        -inFlightRequest
+        -lastGoodSessionData
+    }
+    class RuntimeSettingsBoundary {
+        +parseRuntimeRecommendationSettings()
+        +fetchRuntimeSettings()
+        +boundedNumber()
+    }
+    class TranslationBoundary {
+        +parseTranslationCatalog()
+        +fetchTranslationCatalog()
+        +mergeKnownShape()
+    }
+    class DomainModel {
+        +Champion
+        +Trait
+        +OpEvaluation
+    }
+    class RuntimeRefresh {
+        +refreshOnFocus()
+        +refreshOnOnline()
+        +refreshOnVisibility()
+    }
+
+    RuntimeAPI --> TFTDataBoundary : untrusted JSON
+    RuntimeAPI --> RuntimeSettingsBoundary : untrusted settings
+    RuntimeAPI --> TranslationBoundary : untrusted catalog
+    TFTDataBoundary --> DomainModel : validated conversion
+    RuntimeSettingsBoundary --> DomainModel : bounded policy
+    RuntimeRefresh --> TFTDataBoundary : revalidates
+    RuntimeRefresh --> RuntimeSettingsBoundary : revalidates
 ```
 
-관련 코드: [`i18n/AppI18n.tsx`](./i18n/AppI18n.tsx), [`i18n/useAppI18n.ts`](./i18n/useAppI18n.ts), [`i18n/deviceLocale.ts`](./i18n/deviceLocale.ts), [`i18n/translationApi.ts`](./i18n/translationApi.ts), [`i18n/translationCatalog.ts`](./i18n/translationCatalog.ts)
+관련 코드: [`api/tftApi.ts`](./api/tftApi.ts), [`config/runtimeSettings.ts`](./config/runtimeSettings.ts), [`workspace/hooks/useRuntimeDataRefresh.ts`](./workspace/hooks/useRuntimeDataRefresh.ts), [`i18n/translationApi.ts`](./i18n/translationApi.ts), [`i18n/translationCatalog.ts`](./i18n/translationCatalog.ts), [`store/useTFTBuilderStore.ts`](./store/useTFTBuilderStore.ts)
 
-### 5. WordPress 안에서도 모바일 앱처럼 안정적인 작업 화면을 만들었다
+### 5. 웹 플랫폼 — WordPress와 Android에서 같은 반응형·접근성 계약을 만들었다
 
 개발 서버에서 완성한 React 화면을 Elementor 페이지에 처음 넣었을 때는 같은 CSS가 그대로 적용될 것으로 예상했습니다. 실제 페이지를 열어 보니 Elementor의 전역 button 스타일이 앱 버튼을 덮어썼고, 모든 패널과 챔피언 카드를 처음부터 마운트한 모바일 화면은 첫 표시부터 늦었습니다. 세로로 목록을 넘기다 손가락이 조금만 대각선으로 움직여도 옆 탭으로 이동했고, 빠르게 한 번 스와이프하면 두 패널을 건너뛰는 경우도 있었습니다.
 
@@ -196,21 +294,48 @@ flowchart TD
 전체 목록이 `n`개여도 초기 카드 DOM은 page size `p`개만 만들어지므로 초기 렌더링은 `O(n)`에서 `O(p)`로 줄었고, 다음 묶음도 한 번에 `O(p)`씩 추가됩니다. 스와이프 판정과 팝오버 위치 계산은 `O(1)`입니다. 마지막에는 ARIA tab, 방향키·Home·End, `inert`, reduced motion까지 같은 동작 흐름에서 점검해 WordPress 웹과 Android WebView의 조작 방식을 맞췄습니다.
 
 ```mermaid
-flowchart TD
-    Goal["목표 · WordPress와 Android에서 같은 작업 UX"] --> Simple["1차 구현 · 전체 마운트 + 네이티브 scroll-snap"]
-    Simple --> Failure["문제 · CSS 충돌 · 큰 초기 DOM<br/>대각선 오작동 · 다중 패널 이동 · popover 잘림"]
-    Failure --> Isolation["호스트 CSS를 workspace root에서 격리"]
-    Failure --> Navigation["48px · 1.4배 조건으로 수평 의도 판정"]
-    Failure --> Rendering["방문 패널 지연 마운트<br/>목록은 p개씩 점진 렌더링"]
-    Failure --> Details["공용 store + Portal로 상세 정보 분리"]
-    Navigation --> Adjacent["항상 인접 패널 하나만 이동"]
-    Rendering --> Observer["IntersectionObserver로 다음 p개 추가"]
-    Details --> Position["viewport 배치 · Escape · focus 복귀"]
-    Isolation --> Result["웹·앱 공통 조작 계약"]
-    Adjacent --> Result
-    Observer --> Result
-    Position --> Result
-    Result --> Complexity["초기 렌더링 O(p)<br/>스와이프·위치 계산 O(1)"]
+classDiagram
+    direction LR
+    class TftWorkspace {
+        +mountedModes
+        +portalHost
+        +renderPanels()
+    }
+    class WorkspaceCarousel {
+        +navigateTo()
+        +handleScroll()
+        +handleTouchEnd()
+    }
+    class SwipePolicy {
+        +getAdjacentSwipeIndex()
+        +horizontalThreshold
+        +intentRatio
+    }
+    class ProgressiveRenderer {
+        +renderCount
+        +sentinelRef
+        +getPageSize()
+    }
+    class DetailPopoverStore {
+        +subscribe()
+        +toggle()
+        +close()
+    }
+    class DetailPopover {
+        +calculatePosition()
+        +restoreFocus()
+        +renderPortal()
+    }
+    class HostStyleIsolation {
+        +workspaceScopedSelectors
+    }
+
+    TftWorkspace *-- WorkspaceCarousel
+    WorkspaceCarousel --> SwipePolicy : delegates gesture intent
+    TftWorkspace --> ProgressiveRenderer : mounts bounded lists
+    TftWorkspace *-- DetailPopover : owns portal host
+    DetailPopover --> DetailPopoverStore : subscribes
+    TftWorkspace --> HostStyleIsolation : scopes host overrides
 ```
 
 관련 코드: [`workspace/hooks/useWorkspaceCarousel.ts`](./workspace/hooks/useWorkspaceCarousel.ts), [`workspace/carouselNavigation.ts`](./workspace/carouselNavigation.ts), [`selector/hooks/useProgressiveRenderCount.ts`](./selector/hooks/useProgressiveRenderCount.ts), [`details/DetailPopover.tsx`](./details/DetailPopover.tsx), [`styles/wordpressButtonIsolation.css`](./styles/wordpressButtonIsolation.css)
@@ -224,3 +349,11 @@ npm run build
 ```
 
 핵심 테스트는 조합 순서와 OP 점수, runtime schema·이미지 경계, 마지막 정상 snapshot 복구, baseId 상호 배타, 추천 서명 무효화, 다국어 catalog 병합, 기기 언어 판정, 모바일 제스처, 점진 렌더링, WordPress 스타일 격리를 확인합니다. 프로덕션 빌드는 같은 `dist`가 WordPress 플러그인과 Capacitor Android 동기화의 입력으로 사용될 수 있는지도 함께 검증합니다.
+
+## 설계 원칙 요약
+
+- 계산량은 추측하지 않고 복잡도와 운영 파라미터로 통제합니다.
+- View는 action을 전달하고 상태 전이 규칙은 store 경계에 둡니다.
+- 비슷한 화면의 차이는 조건문 대신 명시적인 Strategy로 표현합니다.
+- 외부 데이터는 타입 단언 전에 런타임에서 검증하고 복구 경로를 함께 설계합니다.
+- 성능, 접근성, 호스트 격리를 별도 후처리가 아닌 UI 아키텍처의 일부로 취급합니다.
