@@ -1,8 +1,12 @@
 import { useMemo } from "react";
 import { useTFTBuilderStore } from "../../../store/useTFTBuilderStore";
 import { getChosung } from "../../../utils/hangul";
+import type { TFTTrait } from "../../../api/tftApi";
 
-export const useTraitSelector = (query: string) => {
+export const useTraitSelector = (
+  query: string,
+  localizeTraitName: (trait: TFTTrait) => string,
+) => {
   const traits = useTFTBuilderStore((state) => state.traits);
   const selectedTraits = useTFTBuilderStore((state) => state.selectedTraits);
 
@@ -21,16 +25,22 @@ export const useTraitSelector = (query: string) => {
     const lowerQuery = query.toLowerCase();
 
     return traits.filter((t) => {
-      const name = t.name.toLowerCase();
-      const chosung = getChosung(name);
+      const names = [t.name, localizeTraitName(t)];
 
-      return name.includes(lowerQuery) || chosung.includes(lowerQuery);
+      return names.some((name) => {
+        const normalizedName = name.toLowerCase();
+        return (
+          normalizedName.includes(lowerQuery) ||
+          getChosung(normalizedName).includes(lowerQuery)
+        );
+      });
     });
-  }, [query, traits]);
+  }, [localizeTraitName, query, traits]);
 
   return {
     traits,
     filtered,
+    selectedTraits,
     totalSelectedCount,
   };
 };

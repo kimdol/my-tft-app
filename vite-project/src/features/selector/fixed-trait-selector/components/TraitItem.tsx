@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { TFTTrait } from "../../../api/tftApi";
 import { useTFTBuilderStore } from "../../../store/useTFTBuilderStore";
 import { radius } from "../../../styles/tokens";
@@ -6,13 +7,12 @@ import Stepper from "./Stepper";
 
 interface Props {
   trait: TFTTrait;
+  count: number;
+  localizedName: string;
 }
 
-export default function TraitItem({ trait }: Props) {
-  const selectedTraits = useTFTBuilderStore((state) => state.selectedTraits);
+function TraitItem({ trait, count, localizedName }: Props) {
   const updateTraitCount = useTFTBuilderStore((state) => state.updateTraitCount);
-
-  const count = selectedTraits.get(trait.name) || 0;
 
   const handleDecrease = () => {
     if (count > 0) updateTraitCount(trait.name, count - 1);
@@ -31,13 +31,16 @@ export default function TraitItem({ trait }: Props) {
         ${count > 0 ? "border-purple-500/50 bg-purple-500/10" : "hover:bg-white/10"}
       `}
     >
-      <TraitProfile name={trait.name} iconUrl={trait.iconUrl} />
+      <TraitProfile name={localizedName} iconUrl={trait.iconUrl} />
       <Stepper 
         value={count} 
         onIncrease={handleIncrease} 
         onDecrease={handleDecrease} 
+        label={localizedName}
         min={0} 
       />
     </div>
   );
 }
+
+export default memo(TraitItem);

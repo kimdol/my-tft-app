@@ -1,35 +1,35 @@
 import { useEffect, useMemo } from "react";
 import { useTFTBuilderStore } from "../../../store/useTFTBuilderStore";
 import { filterChampionsByQuery } from "../../../utils/searchUtils";
-import type { SelectorMode } from "../../../store/useSelectorModeStore";
+import { useAppI18n } from "../../../i18n/useAppI18n";
+import type { ChampionSelectorStrategy } from "../selectorStrategies";
 
-export const useChampionSelector = (query: string, mode: SelectorMode = 'candidate') => {
+export const useChampionSelector = (
+  query: string,
+  strategy: ChampionSelectorStrategy,
+) => {
+  const { championName, traitName } = useAppI18n();
   const champions = useTFTBuilderStore((state) => state.champions);
   const loading = useTFTBuilderStore((state) => state.loading);
   const error = useTFTBuilderStore((state) => state.error);
   const fetchAll = useTFTBuilderStore((state) => state.fetchAll);
-
-  const candidateSelected = useTFTBuilderStore((state) => state.selectedChampions);
-  const fixedSelected = useTFTBuilderStore((state) => state.fixedChampions);  
-  
-  const toggle = useTFTBuilderStore((state) => 
-    mode === 'candidate' ? state.toggle : state.toggleFixed
+  const selected = useTFTBuilderStore(strategy.selectSelected);
+  const oppositeSelected = useTFTBuilderStore(
+    strategy.selectOppositeSelected,
   );
-  const clear = useTFTBuilderStore((state) => 
-    mode === 'candidate' ? state.clearSelected : state.clearFixed
-  );
-
-  const selected = mode === 'candidate' ? candidateSelected : fixedSelected;
-  const oppositeSelected = mode === 'candidate' ? fixedSelected : candidateSelected;
-  
+  const toggle = useTFTBuilderStore(strategy.selectToggle);
+  const clear = useTFTBuilderStore(strategy.selectClear);
 
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
 
-const filtered = useMemo(() => {
-    return filterChampionsByQuery(champions, query);
-  }, [query, champions]);
+  const filtered = useMemo(() => {
+    return filterChampionsByQuery(champions, query, {
+      championName,
+      traitName,
+    });
+  }, [championName, champions, query, traitName]);
 
   return {
     champions,

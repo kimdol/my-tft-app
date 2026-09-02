@@ -1,146 +1,198 @@
-import { useState } from "react";
-import { CheckCircle2 } from "lucide-react";
+import { memo, useId, useMemo, useState, useSyncExternalStore } from "react";
+import { CheckCircle2, Info } from "lucide-react";
 import type { Champion } from "../types";
-import { COST_BORDERS, CARD_STYLES } from "../constants";
+import { COST_VARIANTS } from "../../../styles/costVariants";
+import { componentTokens, radius } from "../../../styles/tokens";
+import type { ChampionSelectorStrategy } from "../selectorStrategies";
+import StaticOpBadge from "../../../op-details/StaticOpBadge";
 import FallbackAvatar from "./FallbackAvatar";
-import Card from "../../../ui/Card";
-import Text from "../../../ui/Text";
-import { radius } from "../../../styles/tokens";
-import type { SelectorMode } from "../../../store/useSelectorModeStore";
+import { useAppI18n } from "../../../i18n/useAppI18n";
+import { createChampionCardViewModel } from "../../../team-builder/view-models/championCardViewModel";
+import {
+  getClosedDetailPopoverState,
+  getDetailPopoverState,
+  subscribeToDetailPopover,
+  toggleDetailPopover,
+} from "../../../details/detailPopoverStore";
 
 interface Props {
   champion: Champion;
   isSelected: boolean;
   isOppositeSelected?: boolean;
   onToggle: (id: string) => void;
-  mode: SelectorMode;
+  strategy: ChampionSelectorStrategy;
 }
 
-export default function ChampionCard({
+function ChampionCard({
   champion,
   isSelected,
   isOppositeSelected = false,
   onToggle,
-  mode,
+  strategy,
 }: Props) {
-  const [imgError, setImgError] = useState(false);
-
+  const { championName, copy, formatCost } = useAppI18n();
+  const [imageFailed, setImageFailed] = useState(false);
+  const localizedName = championName(champion);
+  const reactId = useId().replace(/:/g, "");
+  const infoTriggerId = `selector-champion-${champion.id}-${reactId}`;
+  const isInfoOpen = useSyncExternalStore(
+    subscribeToDetailPopover,
+    () => getDetailPopoverState().triggerId === infoTriggerId,
+    () => getClosedDetailPopoverState().triggerId === infoTriggerId,
+  );
+  const opEvaluation =
+    champion.staticPower?.evaluations.find(
+      (evaluation) => evaluation.isOp,
+    ) ?? null;
+  const detailChampion = useMemo(
+    () => createChampionCardViewModel(
+      champion,
+      strategy.id === "fixed",
+      opEvaluation,
+    ),
+    [champion, opEvaluation, strategy.id],
+  );
+  const hasImage = champion.imageUrl.length > 0 && !imageFailed;
   const isAnySelected = isSelected || isOppositeSelected;
-
-  const isCandidateMode = mode === "candidate";
-
-  const primaryOverlay = isCandidateMode ? "bg-white/20" : "bg-rose-600/45";
-  const oppositeOverlay = isCandidateMode ? "bg-rose-600/45" : "bg-white/20";
-
-  const primaryRing = isCandidateMode
-    ? "ring-4 ring-white shadow-[0_0_15px_rgba(255,255,255,0.6)]"
-    : "ring-4 ring-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.6)]";
-
-  const oppositeRing = isCandidateMode
-    ? "ring-4 ring-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.6)]"
-    : "ring-4 ring-white shadow-[0_0_15px_rgba(255,255,255,0.6)]";
-
-  const overlayColor = isOppositeSelected ? oppositeOverlay : primaryOverlay;
-  const selectedRingColor = isOppositeSelected ? oppositeRing : primaryRing;
+  const variant = COST_VARIANTS[champion.cost];
+  const overlayColor = isOppositeSelected
+    ? strategy.oppositeOverlay
+    : strategy.primaryOverlay;
+  const selectedRingColor = isOppositeSelected
+    ? strategy.oppositeRing
+    : strategy.primaryRing;
+  const selectionDescription = isSelected
+    ? `${copy.selector[strategy.id].currentSelectionLabel} ${copy.selector.unselect}`
+    : isOppositeSelected
+      ? `${copy.selector[strategy.id].oppositeSelectionLabel} ${copy.selector.select}`
+      : `${copy.selector[strategy.id].currentSelectionLabel} ${copy.selector.select}`;
 
   return (
     <div
-      onClick={() => onToggle(champion.id)}
-      className={`
-        relative
-        group
-        cursor-pointer
-        transition-transform
-        duration-300
-        hover:scale-[1.03]
-        active:scale-[0.98]
-        ${radius.lg}
-        overflow-hidden
-      `}
+      className="relative w-full"
+      style={{ containerType: "inline-size" }}
     >
-      <Card
+      <button
+        type="button"
+        data-champion-card
+        aria-pressed={isSelected}
+        aria-label={`${localizedName}, ${formatCost(champion.cost)}, ${selectionDescription}`}
+        onClick={() => onToggle(champion.id)}
         className={`
-          p-0
-          overflow-hidden
-          transition-all
-          ${CARD_STYLES.border} 
-          ${COST_BORDERS[champion.cost as keyof typeof COST_BORDERS]}
-          ${isAnySelected ? `${selectedRingColor} scale-[0.98]` : "hover:brightness-110"}
+          group relative block w-full
+          ${radius.lg} overflow-hidden
+          border-[3px] border-solid ${variant.cardBorder}
+          ${variant.placeholder}
+          text-left shadow-[0_10px_24px_rgba(0,0,0,0.35)]
+          transition-[transform,filter,box-shadow] duration-200
+          hover:scale-[1.03] hover:brightness-110
+          active:scale-[0.98]
+          focus-visible:outline focus-visible:outline-2
+          focus-visible:outline-offset-2 focus-visible:outline-white
+          ${isAnySelected ? selectedRingColor : ""}
         `}
       >
-        <div className="relative w-full aspect-[2/3] overflow-hidden">
-          {!imgError ? (
+        <span className="relative block aspect-[2/3] w-full overflow-hidden">
+          {hasImage ? (
             <img
               src={champion.imageUrl}
-              onError={() => setImgError(true)}
-              className="
-                absolute inset-0
-                w-full h-full
-                object-cover
-                transition-transform
-                duration-300
-              "
+              alt=""
+              width="220"
+              height="330"
+              loading="lazy"
+              decoding="async"
+              fetchPriority="low"
+              onError={() => setImageFailed(true)}
+              className="absolute inset-0 h-full w-full object-cover"
             />
           ) : (
-            <FallbackAvatar name={champion.name} />
+            <FallbackAvatar name={localizedName} />
           )}
 
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-
-          <div className="absolute top-[2px] left-[2px] flex flex-col gap-0.5 z-10">
-            {champion.traits.map((trait, i) => (
-              <div
-                key={`${champion.id}-trait-${i}`}
-                className="w-4 h-4 p-[2px] bg-black/60 backdrop-blur-sm rounded-full border border-white/20 flex items-center justify-center"
-              >
-                <img
-                  src={trait.iconUrl}
-                  alt=""
-                  className="w-full h-full object-contain"
-                />
-              </div>
-            ))}
-          </div>
-
-          <div
-            className="
-              absolute bottom-0 left-0 w-full 
-              px-1 pb-1 pt-10 
-              flex flex-col items-center text-center 
-              bg-gradient-to-b from-transparent via-black/70 to-black/95
-            "
-          >
-            <Text
-              variant="label"
-              className="
-                w-full text-white font-bold leading-[1] 
-                drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] 
-                whitespace-normal break-keep text-center
-              "
+          <span className="absolute inset-x-0 bottom-0 flex min-h-[46%] flex-col items-center justify-end bg-gradient-to-b from-transparent via-black/75 to-black/95 px-1.5 pb-2 pt-8 text-center">
+            <span
+              className={`
+                ${componentTokens.cardNameText}
+                w-full overflow-hidden break-words text-center
+                font-black leading-[1.15] text-white
+                drop-shadow-[0_1px_1px_rgba(0,0,0,0.9)]
+                [display:-webkit-box] [-webkit-box-orient:vertical]
+                [-webkit-line-clamp:2]
+              `}
             >
-              {champion.name}
-            </Text>
-
-            <Text
-              variant="caption"
-              className="
-                text-yellow-400 font-black mt-0.5
-                leading-none drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]
-              "
+              {localizedName}
+            </span>
+            <span
+              className={`
+                ${componentTokens.cardCaptionText}
+                mt-1 font-black leading-none text-amber-300
+              `}
             >
-              {champion.cost}G
-            </Text>
-          </div>
+              {formatCost(champion.cost)}
+            </span>
+          </span>
 
           {isAnySelected && (
-            <div
-              className={`absolute inset-0 flex items-center justify-center backdrop-blur-[1px] ${overlayColor}`}
+            <span
+              data-selection-overlay
+              className={`absolute inset-0 flex items-center justify-center ${overlayColor}`}
             >
-              <CheckCircle2 className="text-white w-10 h-10" />
-            </div>
+              <CheckCircle2
+                aria-hidden="true"
+                className="h-9 w-9 text-white drop-shadow-[0_2px_5px_rgba(0,0,0,0.8)]"
+              />
+              <span className="sr-only">
+                {isOppositeSelected
+                  ? `${copy.selector[strategy.id].oppositeSelectionLabel} ${copy.common.selected}`
+                  : `${copy.selector[strategy.id].currentSelectionLabel} ${copy.common.selected}`}
+              </span>
+            </span>
           )}
+        </span>
+      </button>
+
+      <button
+        id={infoTriggerId}
+        type="button"
+        data-champion-info-trigger
+        data-detail-popover-trigger
+        aria-label={`${localizedName}, ${copy.detail.championInfo}`}
+        aria-expanded={isInfoOpen}
+        aria-controls={isInfoOpen ? "tft-detail-popover" : undefined}
+        onClick={(event) => {
+          event.stopPropagation();
+          toggleDetailPopover(infoTriggerId, event.currentTarget, {
+            kind: "champion",
+            champion: detailChampion,
+          });
+        }}
+        className={`
+          ${componentTokens.touchTarget}
+          absolute -left-1 -top-1 z-30 inline-flex items-start justify-start p-1
+          focus-visible:outline focus-visible:outline-2
+          focus-visible:outline-offset-1 focus-visible:outline-white
+        `}
+      >
+        <span
+          aria-hidden="true"
+          className="
+            inline-flex h-6 w-6 items-center justify-center rounded-md
+            border border-sky-200/90
+            bg-gradient-to-br from-sky-500 via-indigo-600 to-violet-800
+            text-white shadow-[0_0_0_1px_rgba(0,0,0,0.85),0_0_9px_rgba(56,189,248,0.55)]
+          "
+        >
+          <Info className="h-3.5 w-3.5" strokeWidth={2.5} />
+        </span>
+      </button>
+
+      {opEvaluation && (
+        <div className="absolute -right-1 -top-1 z-30">
+          <StaticOpBadge evaluation={opEvaluation} />
         </div>
-      </Card>
+      )}
     </div>
   );
 }
+
+export default memo(ChampionCard);

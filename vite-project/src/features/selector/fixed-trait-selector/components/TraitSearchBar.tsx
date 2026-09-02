@@ -1,6 +1,7 @@
 import { Search } from "lucide-react";
 import { typography } from "../../../styles/typography";
 import { radius } from "../../../styles/tokens";
+import { useAppI18n } from "../../../i18n/useAppI18n";
 
 interface Props {
   query: string;
@@ -8,14 +9,20 @@ interface Props {
   placeholder?: string;
 }
 
-export default function TraitSearchBar({ query, setQuery, placeholder = "특성 검색" }: Props) {
+export default function TraitSearchBar({ query, setQuery, placeholder }: Props) {
+  const { copy } = useAppI18n();
+  const inputPlaceholder = placeholder ?? copy.traits.searchPlaceholder;
+
   return (
-    <div className="relative w-full sm:w-64 shrink-0">
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+    <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-none">
+      <Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
       <input
+        type="search"
+        aria-label={copy.traits.searchAria}
+        autoComplete="off"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder={placeholder}
+        placeholder={inputPlaceholder}
         className={`
           w-full pl-9 pr-3 h-10
           bg-white/10 border border-white/10 ${radius.lg}

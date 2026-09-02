@@ -1,24 +1,39 @@
-import SelectedChip from './SelectedChip';
-import { useChampionSelector } from '../hooks/useChampionSelector';
-import type { SelectorMode } from "../../../store/useSelectorModeStore";
+import { useMemo } from "react";
+import { useTFTBuilderStore } from "../../../store/useTFTBuilderStore";
+import SelectedChip from "./SelectedChip";
+import type { ChampionSelectorStrategy } from "../selectorStrategies";
+import { useAppI18n } from "../../../i18n/useAppI18n";
 
 interface Props {
-  mode: SelectorMode;
+  strategy: ChampionSelectorStrategy;
 }
 
-export default function SelectedList({ mode }: Props) {
-  const { selected, champions, toggle } = useChampionSelector('', mode);
+export default function SelectedList({ strategy }: Props) {
+  const { championName, copy } = useAppI18n();
+  const selectorCopy = copy.selector[strategy.id];
+  const champions = useTFTBuilderStore((state) => state.champions);
+  const selected = useTFTBuilderStore(strategy.selectSelected);
+  const toggle = useTFTBuilderStore(strategy.selectToggle);
+  const championById = useMemo(
+    () => new Map(champions.map((champion) => [champion.id, champion])),
+    [champions],
+  );
+
+  if (selected.size === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-2 p-3 border border-white/10 rounded-lg">
+    <div
+      aria-label={`${selectorCopy.currentSelectionLabel} ${copy.common.selected}`}
+      className="flex flex-wrap gap-2 rounded-lg border border-white/10 p-3"
+    >
       {[...selected].map((id) => {
-        const champ = champions.find((c) => c.id === id);
+        const champ = championById.get(id);
         if (!champ) return null;
 
         return (
           <SelectedChip
             key={id}
-            name={champ.name}
+            name={championName(champ)}
             cost={champ.cost}
             onRemove={() => toggle(id)}
           />

@@ -13,6 +13,11 @@ export default function TraitProfile({ name, iconUrl }: Props) {
           <img
             src={iconUrl}
             alt={name}
+            width="24"
+            height="24"
+            loading="lazy"
+            decoding="async"
+            fetchPriority="low"
             className="w-full h-full object-contain"
           />
         ) : (

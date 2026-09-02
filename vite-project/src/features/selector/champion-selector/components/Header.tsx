@@ -1,22 +1,20 @@
 import { Trash2 } from "lucide-react";
 import { useTFTBuilderStore } from "../../../store/useTFTBuilderStore";
 import Text from "../../../ui/Text";
-import type { SelectorMode } from "../../../store/useSelectorModeStore";
+import { useAppI18n } from "../../../i18n/useAppI18n";
+import type { ChampionSelectorStrategy } from "../selectorStrategies";
 
 interface Props {
-  mode: SelectorMode;
+  strategy: ChampionSelectorStrategy;
 }
 
-export default function Header({ mode }: Props) {
-  const count = useTFTBuilderStore((state) => 
-    mode === 'candidate' ? state.selectedChampions.size : state.fixedChampions.size
+export default function Header({ strategy }: Props) {
+  const { copy } = useAppI18n();
+  const selectorCopy = copy.selector[strategy.id];
+  const count = useTFTBuilderStore(
+    (state) => strategy.selectSelected(state).size,
   );
-  const clear = useTFTBuilderStore((state) => 
-    mode === 'candidate' ? state.clearSelected : state.clearFixed
-  );
-
-  const labelText = mode === 'candidate' ? "후보 카드 수" : "고정 카드 수";
-  const countColor = mode === 'candidate' ? "text-purple-400" : "text-blue-400";
+  const clear = useTFTBuilderStore(strategy.selectClear);
 
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-end mb-4">
@@ -33,19 +31,24 @@ export default function Header({ mode }: Props) {
           "
         >
           <Text variant="label" className="opacity-50">
-            {labelText}
+            {selectorCopy.countLabel}
           </Text>
-          <Text variant="badge" className={`font-bold ${countColor}`}>
+          <Text
+            variant="badge"
+            className={`font-bold ${strategy.countColor}`}
+          >
             {count}
           </Text>
         </div>
 
-        {count > -1 && (
+        {count > 0 && (
         <button
+          type="button"
+          data-tft-clear-selection
+          aria-label={selectorCopy.clearAllAria}
           onClick={clear}
-          onMouseUp={(e) => e.currentTarget.blur()}
           className="
-            flex items-center justify-center
+            flex min-h-10 items-center justify-center
             gap-1.5
 
             px-3.5 py-1.5
@@ -69,10 +72,11 @@ export default function Header({ mode }: Props) {
             active:bg-red-500/35
             active:text-red-200
 
-            focus:outline-none
+            focus-visible:outline focus-visible:outline-2
+            focus-visible:outline-offset-2 focus-visible:outline-white
           "
         >
-          <Trash2 size={14} className="opacity-90" />
+          <Trash2 aria-hidden="true" size={14} className="opacity-90" />
 
           <span
             className="
@@ -83,7 +87,7 @@ export default function Header({ mode }: Props) {
               tracking-wide
             "
           >
-            전체 삭제
+            {selectorCopy.clearAll}
           </span>
         </button>
         )}
