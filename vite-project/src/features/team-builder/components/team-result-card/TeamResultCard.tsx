@@ -1,87 +1,118 @@
 import { useMemo } from "react";
 import Card from "../../../ui/Card";
 import { layout } from "../../../styles/layout";
-
 import TeamResultHeader from "./TeamResultHeader";
 import ChampionItem from "./ChampionItem";
-import TraitChip, { type ActiveTraitData } from "./TraitChip";
-
-import { getTraitCountMap } from "../../../core/traitEvaluator";
-import { getTraitTier } from "../../../core/traitTierUtils";
+import TraitChip from "./TraitChip";
 import { useTFTBuilderStore } from "../../../store/useTFTBuilderStore";
 import { useSelectorModeStore } from "../../../store/useSelectorModeStore";
-
 import type { BeamSearchResult } from "../../../core/beamSearchOptimizer";
-import type { Champion } from "../../../selector/champion-selector/types";
-import type { TFTTrait } from "../../../api/tftApi";
+import type { Champion } from "../../../domain/champion";
+import type { ChampionCardViewModel } from "../../view-models/championCardViewModel";
+import { createRecommendedUnitGroups } from "../../view-models/recommendedUnitGroups";
+import { useAppI18n } from "../../../i18n/useAppI18n";
 
 interface Props {
-  selectedTraits: Map<string, number>;
   result: BeamSearchResult;
-  champMap: Map<string, Champion>;
-  traitMap: Map<string, TFTTrait>;
+  champMap: ReadonlyMap<string, Champion>;
+  fixedChampions: ReadonlySet<string>;
 }
 
-export default function TeamResultCard({ result, selectedTraits, champMap, traitMap }: Props) {
-  const selectTeam = useTFTBuilderStore((state) => state.selectTeam);
+interface UnitGroupProps {
+  kind: "fixed" | "candidate";
+  label: string;
+  units: readonly ChampionCardViewModel[];
+  onRemove: (id: string) => void;
+}
+
+const UnitGroup = ({ kind, label, units, onRemove }: UnitGroupProps) => {
+  const { copy, formatCount } = useAppI18n();
+  if (units.length === 0) return null;
+
+  return (
+    <section
+      data-result-unit-group={kind}
+      aria-label={`${label} ${formatCount(units.length)}`}
+    >
+      <div className="mb-2 flex items-center gap-2">
+        <h3 className="shrink-0 text-xs font-black text-white/60">
+          {label}
+        </h3>
+        <span
+          aria-hidden="true"
+          className="h-px min-w-0 flex-1 bg-white/10"
+        />
+        <span className="text-[10px] font-bold tabular-nums text-white/35">
+          {units.length}
+        </span>
+      </div>
+      <div className={layout.championGrid}>
+        {units.map((champion) => (
+          <ChampionItem
+            key={champion.id}
+            champion={champion}
+            removeLabel={`${label} ${copy.selector.removeSelection}`}
+            onRemove={onRemove}
+          />
+        ))}
+      </div>
+    </section>
+  );
+};
+
+export default function TeamResultCard({
+  result,
+  champMap,
+  fixedChampions,
+}: Props) {
+  const { copy } = useAppI18n();
+  const applyTeamAsFixed = useTFTBuilderStore(
+    (state) => state.applyTeamAsFixed,
+  );
+  const removeCandidate = useTFTBuilderStore((state) => state.toggle);
+  const removeFixed = useTFTBuilderStore((state) => state.toggleFixed);
   const setMode = useSelectorModeStore((state) => state.setMode);
-
-  const activeTraits = useMemo(() => {
-    const traitCount = getTraitCountMap(result.node, champMap);
-
-    selectedTraits.forEach((count, traitName) => {
-      const currentCount = traitCount.get(traitName) || 0;
-      traitCount.set(traitName, currentCount + count);
-    });
-
-    return [...traitCount.entries()]
-      .map(([name, count]): ActiveTraitData | null => {
-        const trait = traitMap.get(name);
-        if (!trait) return null;
-        const tier = getTraitTier(trait, count);
-        return tier >= 0 ? { name, count, trait, tier } : null;
-      })
-      .filter((item): item is ActiveTraitData => item !== null) 
-      .sort((a, b) => {
-        if (b.count !== a.count) return b.count - a.count;
-        return b.tier - a.tier;
-      });
-  }, [result.node, champMap, traitMap, selectedTraits]);
-
-  const sortedChampions = useMemo(() => {
-    return result.node
-      .toArray()
-      .map((id) => champMap.get(id))
-      .filter((champ): champ is Champion => champ !== undefined) 
-      .sort((a, b) => a.cost - b.cost);
-  }, [result.node, champMap]);
+  const unitGroups = useMemo(
+    () =>
+      createRecommendedUnitGroups(
+        result.node.toArray(),
+        champMap,
+        fixedChampions,
+      ),
+    [result.node, champMap, fixedChampions],
+  );
 
   const handleApplyTeam = () => {
-    const ids = result.node.toArray();
-    selectTeam(ids);
-    setMode("candidate");
+    applyTeamAsFixed(result.node.toArray());
+    setMode("fixed");
   };
 
   return (
-    <div
-      className="w-full transform-gpu"
-      style={{
-        contentVisibility: "auto",
-        containIntrinsicSize: "0 500px",
-      }}
-    >
+    <div className="w-full">
       <Card>
-        <TeamResultHeader score={result.score} onApply={handleApplyTeam} />
+        <TeamResultHeader
+          score={result.score}
+          onApply={handleApplyTeam}
+        />
 
-        <div className={layout.championGrid}>
-          {sortedChampions.map((champ) => (
-            <ChampionItem key={champ.id} name={champ.name} cost={champ.cost} />
-          ))}
+        <div className="space-y-4">
+          <UnitGroup
+            kind="fixed"
+            label={copy.team.fixedUnits}
+            units={unitGroups.fixedUnits}
+            onRemove={removeFixed}
+          />
+          <UnitGroup
+            kind="candidate"
+            label={copy.team.recommendedUnits}
+            units={unitGroups.candidateUnits}
+            onRemove={removeCandidate}
+          />
         </div>
 
-        <div className="flex flex-wrap gap-1.5 mt-3">
-          {activeTraits.map((t) => (
-            <TraitChip key={t.name} trait={t} />
+        <div className={layout.traitRow}>
+          {result.activeTraits.map((trait) => (
+            <TraitChip key={trait.name} trait={trait} />
           ))}
         </div>
       </Card>

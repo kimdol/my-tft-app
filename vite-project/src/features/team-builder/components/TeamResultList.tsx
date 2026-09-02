@@ -3,21 +3,34 @@ import ResponsiveGrid from "../../ui/ResponsiveGrid";
 import { TeamResultCard } from "./team-result-card";
 
 import type { BeamSearchResult } from "../../core/beamSearchOptimizer";
-import type { Champion } from "../../selector/champion-selector/types";
-import type { TFTTrait } from "../../api/tftApi";
+import type { Champion } from "../../domain/champion";
+import { useAppI18n } from "../../i18n/useAppI18n";
 
 interface Props {
-  selectedTraits: Map<string, number>;
-  results: BeamSearchResult[];
-  champMap: Map<string, Champion>;
-  traitMap: Map<string, TFTTrait>;
+  results: readonly BeamSearchResult[];
+  fixedChampions: ReadonlySet<string>;
+  champMap: ReadonlyMap<string, Champion>;
+  needsRecalculation: boolean;
 }
 
-export default function TeamResultList({ selectedTraits, results, champMap, traitMap }: Props) {
+export default function TeamResultList({
+  results,
+  fixedChampions,
+  champMap,
+  needsRecalculation,
+}: Props) {
+  const { copy } = useAppI18n();
   if (!results || results.length === 0) {
     return (
-      <Text as="div" variant="body" className="text-center opacity-80 py-12 pb-24">
-        최적의 팀 결과가 여기에 표시됩니다.
+      <Text
+        as="div"
+        variant="body"
+        role={needsRecalculation ? "status" : undefined}
+        className="text-center opacity-80 py-12 pb-24"
+      >
+        {needsRecalculation
+          ? copy.team.staleResults
+          : copy.team.emptyResults}
       </Text>
     );
   }
@@ -29,9 +42,8 @@ export default function TeamResultList({ selectedTraits, results, champMap, trai
           <TeamResultCard 
             key={r.node.key()} 
             result={r} 
-            selectedTraits={selectedTraits} 
+            fixedChampions={fixedChampions}
             champMap={champMap}
-            traitMap={traitMap}
           />
         ))}
       </ResponsiveGrid>
