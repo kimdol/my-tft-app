@@ -1,6 +1,16 @@
 /*
 !.gitignore
+!README.md
 !my-tft-app.php
+!OPERATIONS.md
+!config/
+!config/**
+!includes/
+!includes/**
+!translations/
+!translations/**
+!tests/
+!tests/**
 
 !vite-project/
 vite-project/*
